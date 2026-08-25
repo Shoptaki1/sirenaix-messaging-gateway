@@ -1382,8 +1382,8 @@ func exerciseTask7Durability(t *testing.T, ctx context.Context, repository *Repo
 			Text: "two images", Transport: "mms", State: domain.MessageStateDelivered,
 		}}},
 		Media: []ingress.MediaLocator{
-			{ProviderMessageID: "task7-two-image-message", Locator: "gmessages:first", Position: 0, MIMEType: "image/png", DeclaredSize: 7, DisplayFilename: "first.png", KeyEnvelope: mediaSecret},
-			{ProviderMessageID: "task7-two-image-message", Locator: "gmessages:second", Position: 1, MIMEType: "image/png", DeclaredSize: 8, DisplayFilename: "second.png", KeyEnvelope: mediaSecret},
+			{ProviderMessageID: "task7-two-image-message", Locator: "gmessages:first", Position: 0, MIMEType: "image/png", DeclaredSize: 7, DisplayFilename: "first.png", KeyEnvelope: mediaSecret, KeyDigest: sha256.Sum256([]byte("task7-media-key-material"))},
+			{ProviderMessageID: "task7-two-image-message", Locator: "gmessages:second", Position: 1, MIMEType: "image/png", DeclaredSize: 8, DisplayFilename: "second.png", KeyEnvelope: mediaSecret, KeyDigest: sha256.Sum256([]byte("task7-media-key-material"))},
 		},
 	}
 	twoImageResult, err := inbox.Process(ctx, twoImageEnvelope)

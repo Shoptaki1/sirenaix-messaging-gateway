@@ -159,7 +159,7 @@ func TestConversationListWrappersCannotIgnoreDurablePoison(t *testing.T) {
 			}
 			switch typed := result.(type) {
 			case DurableListConversationsResult:
-				if typed.Response != nil || typed.Outcome != DurableOutcomeUnknown {
+				if typed.Response != nil || typed.Outcome != DurableOutcomePoisoned {
 					t.Fatalf("durable wrapper exposed poison = %+v", typed)
 				}
 			case *gmproto.ListConversationsResponse:

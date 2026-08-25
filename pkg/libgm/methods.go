@@ -35,11 +35,16 @@ func (c *Client) ListConversationsWithCursorDurable(ctx context.Context, count i
 		Data:        buildListConversationsRequest(count, folder, cursor),
 		MessageType: msgType,
 	})
+	result := DurableListConversationsResult{}
+	if message != nil {
+		result.Outcome = message.DurableOutcome
+	}
 	response, err := typedResponse[*gmproto.ListConversationsResponse](message, err)
 	if err != nil {
-		return DurableListConversationsResult{}, err
+		return result, err
 	}
-	return DurableListConversationsResult{Response: response, Outcome: message.DurableOutcome}, nil
+	result.Response = response
+	return result, nil
 }
 
 func buildListConversationsRequest(count int, folder gmproto.ListConversationsRequest_Folder, cursor *gmproto.Cursor) *gmproto.ListConversationsRequest {
@@ -117,11 +122,16 @@ func (c *Client) FetchMessagesDurable(ctx context.Context, conversationID string
 	payload := &gmproto.ListMessagesRequest{ConversationID: conversationID, Count: count, Cursor: cursor}
 	actionType := gmproto.ActionType_LIST_MESSAGES
 	message, err := c.sessionHandler.sendMessage(ctx, actionType, payload)
+	result := DurableListMessagesResult{}
+	if message != nil {
+		result.Outcome = message.DurableOutcome
+	}
 	response, err := typedResponse[*gmproto.ListMessagesResponse](message, err)
 	if err != nil {
-		return DurableListMessagesResult{}, err
+		return result, err
 	}
-	return DurableListMessagesResult{Response: response, Outcome: message.DurableOutcome}, nil
+	result.Response = response
+	return result, nil
 }
 
 func (c *Client) SendMessage(ctx context.Context, payload *gmproto.SendMessageRequest) (*gmproto.SendMessageResponse, error) {

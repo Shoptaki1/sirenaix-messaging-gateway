@@ -37,13 +37,13 @@ WITH candidate AS MATERIALIZED (
               job.thumbnail_key_nonce, job.thumbnail_key_id, job.thumbnail_key_version,
               job.attempt_count, job.owner_id, job.claim_token
 )
-SELECT job_id, media_id, connection_id, provider_message_id, provider_locator,
-       declared_mime_type, declared_size, display_filename,
-       COALESCE(key_ciphertext, ''::bytea), COALESCE(key_wrapped_dek, ''::bytea),
-       COALESCE(key_nonce, ''::bytea), COALESCE(key_id, ''), COALESCE(key_version, 0),
-       COALESCE(thumbnail_key_ciphertext, ''::bytea), COALESCE(thumbnail_key_wrapped_dek, ''::bytea),
-       COALESCE(thumbnail_key_nonce, ''::bytea), COALESCE(thumbnail_key_id, ''), COALESCE(thumbnail_key_version, 0),
-       attempt_count, owner_id, claim_token,
+SELECT claimed.job_id, claimed.media_id, claimed.connection_id, claimed.provider_message_id, claimed.provider_locator,
+       claimed.declared_mime_type, claimed.declared_size, claimed.display_filename,
+       COALESCE(claimed.key_ciphertext, ''::bytea), COALESCE(claimed.key_wrapped_dek, ''::bytea),
+       COALESCE(claimed.key_nonce, ''::bytea), COALESCE(claimed.key_id, ''), COALESCE(claimed.key_version, 0),
+       COALESCE(claimed.thumbnail_key_ciphertext, ''::bytea), COALESCE(claimed.thumbnail_key_wrapped_dek, ''::bytea),
+       COALESCE(claimed.thumbnail_key_nonce, ''::bytea), COALESCE(claimed.thumbnail_key_id, ''), COALESCE(claimed.thumbnail_key_version, 0),
+       claimed.attempt_count, claimed.owner_id, claimed.claim_token,
        object.state, COALESCE(object.object_key, ''), object.mime_type, object.byte_size,
        COALESCE(object.sha256_digest, ''::bytea), COALESCE(object.width, 0), COALESCE(object.height, 0),
        object.display_filename, object.created_at

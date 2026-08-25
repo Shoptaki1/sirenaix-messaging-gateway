@@ -480,7 +480,7 @@ func (repository *Repository) RenewClaim(ctx context.Context, tenantID domain.Te
 
 const completeWebhookAttemptSQL = `/* op:complete_webhook_attempt */
 WITH locked_endpoint AS MATERIALIZED (
-    SELECT endpoint.endpoint_id
+    SELECT endpoint.endpoint_id, endpoint.active
     FROM webhook_endpoints AS endpoint
     JOIN webhook_deliveries AS delivery
       ON delivery.tenant_id = endpoint.tenant_id AND delivery.endpoint_id = endpoint.endpoint_id

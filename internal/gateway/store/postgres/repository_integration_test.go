@@ -1619,6 +1619,15 @@ WHERE tenant_id = $1 AND connection_id = $2 AND ordering_key = $3 AND lane_token
 	}
 	const webhookEventID = "task7-webhook-delivery"
 	if err = inTenantExec(ctx, repository, tenantA, func(tx transaction) error {
+		// Earlier Task 7 sections intentionally create events before webhook
+		// endpoints exist. Close those historical webhook outbox rows so this
+		// delivery/DLQ fixture exercises only its explicitly seeded event.
+		if _, updateErr := tx.ExecContext(ctx, `UPDATE event_outbox
+            SET published_at = clock_timestamp()
+            WHERE tenant_id = $1 AND destination = 'webhook' AND published_at IS NULL`,
+			string(tenantA)); updateErr != nil {
+			return updateErr
+		}
 		if _, insertErr := tx.ExecContext(ctx, `INSERT INTO gateway_events
             (tenant_id, event_id, event_type, aggregate_type, aggregate_id, connection_id, canonical_body)
             VALUES ($1, $2, 'task7.webhook', 'test', $2, $3, '{}'::bytea)`,
@@ -1634,7 +1643,7 @@ WHERE tenant_id = $1 AND connection_id = $2 AND ordering_key = $3 AND lane_token
 		t.Fatalf("create Task 7 webhook event: %v", err)
 	}
 	deliveries, err := repository.Claim(ctx, tenantA, "task7-webhook-a", 1)
-	if err != nil || len(deliveries) != 1 {
+	if err != nil || len(deliveries) != 1 || deliveries[0].EventID != webhookEventID {
 		t.Fatalf("claim Task 7 webhook = %+v, %v", deliveries, err)
 	}
 	if err = repository.CompleteAttempt(ctx, webhook.AttemptResult{

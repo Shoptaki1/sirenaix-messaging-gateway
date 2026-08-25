@@ -1617,6 +1617,13 @@ WHERE tenant_id = $1 AND connection_id = $2 AND ordering_key = $3 AND lane_token
 			t.Fatalf("create Task 7 webhook endpoint: %v", err)
 		}
 	}
+	webhookEnvelope, webhookEnvelopeErr := processEnvelope(
+		tenantA, connectionA, ownerA, leaseA.FencingToken,
+		"task7-webhook-response", []byte("task7-webhook-envelope"),
+	)
+	if webhookEnvelopeErr != nil || !webhookEnvelope.ACKEligible {
+		t.Fatalf("create Task 7 webhook event = (%+v, %v)", webhookEnvelope, webhookEnvelopeErr)
+	}
 	deliveries, err := repository.Claim(ctx, tenantA, "task7-webhook-a", 1)
 	if err != nil || len(deliveries) != 1 {
 		t.Fatalf("claim Task 7 webhook = %+v, %v", deliveries, err)

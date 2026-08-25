@@ -533,8 +533,8 @@ func TestPostgresIntegrationBackfillCursorRoutingAndDurablePoisonOutcome(t *test
 	}) {
 		t.Fatalf("restart message request cursor = %+v", secondRequest)
 	}
-	if deliveries-deliveriesBeforeWorker != 3 {
-		t.Fatalf("provider response deliveries = %d after baseline %d, want empty plus two exact poison deliveries", deliveries, deliveriesBeforeWorker)
+	if deliveries-deliveriesBeforeWorker != 4 {
+		t.Fatalf("provider response deliveries = %d after baseline %d, want conversation, empty, plus two exact poison deliveries", deliveries, deliveriesBeforeWorker)
 	}
 	if child, childErr := repository.LoadCommittedCursor(ctx, tenantID, connectionID, "conversation-worker"); childErr != nil || !bytes.Equal(child, wantWorkerCursor) {
 		t.Fatalf("poison changed worker child cursor = %x, %v", child, childErr)

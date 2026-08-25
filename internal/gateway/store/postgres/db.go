@@ -110,13 +110,6 @@ func inTenantExec(ctx context.Context, repository *Repository, tenantID domain.T
 	return err
 }
 
-func requireIdentifier(value string) error {
-	if value == "" {
-		return domain.ErrInvalidIdentifier
-	}
-	return nil
-}
-
 func requireAffected(result sql.Result, notFound error) error {
 	count, err := result.RowsAffected()
 	if err != nil {

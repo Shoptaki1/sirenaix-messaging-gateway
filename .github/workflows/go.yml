@@ -1,6 +1,9 @@
 name: Go
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 env:
   GOTOOLCHAIN: local
@@ -121,7 +124,7 @@ jobs:
       - name: Install dependencies
         run: |
           go install golang.org/x/tools/cmd/goimports@v0.40.0
-          go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
+          GOTOOLCHAIN=auto go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
           export PATH="$HOME/go/bin:$PATH"
 
       - name: Run pre-commit

@@ -215,7 +215,7 @@ func TestMessageReadExposesDirectionTransportProviderIdentityAndOrderedAttachmen
 	body := response.Body.String()
 	if response.Code != http.StatusOK || !strings.Contains(body, `"direction":"inbound"`) ||
 		!strings.Contains(body, `"transport":"mms"`) || !strings.Contains(body, `"provider_message_id":"provider-a"`) ||
-		strings.Index(body, "media-first") < 0 || strings.Index(body, "media-first") > strings.Index(body, "media-second") {
+		!strings.Contains(body, "media-first") || strings.Index(body, "media-first") > strings.Index(body, "media-second") {
 		t.Fatalf("message response = %d %s", response.Code, body)
 	}
 }

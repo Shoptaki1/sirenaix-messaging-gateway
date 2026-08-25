@@ -3,6 +3,7 @@
 package gmessages
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -91,7 +92,7 @@ func TestPostgresIntegrationACKLimiterReservesPoolAndRenewsLeases(t *testing.T) 
 		responseID := fmt.Sprintf("response-ack-%02d", index)
 		if err = repository.SaveConnection(ctx, tenantID, postgres.ConnectionRecord{Connection: domain.Connection{
 			ID: connectionID, TenantID: tenantID, State: domain.ConnectionStateConnected,
-		}}); err != nil {
+		}, ProviderDeviceFingerprint: bytes.Repeat([]byte{byte(index + 1)}, 32)}); err != nil {
 			t.Fatalf("save connection %d: %v", index, err)
 		}
 		lease, acquired, acquireErr := repository.AcquireConnectionLease(ctx, tenantID, connectionID, "actor-owner", 30*time.Second)

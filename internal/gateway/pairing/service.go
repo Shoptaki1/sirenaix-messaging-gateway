@@ -748,12 +748,6 @@ func (service *Service) removeLocked(active *activeAttempt) {
 	service.mu.Unlock()
 }
 
-func publicAttempt(active *activeAttempt) Attempt {
-	active.mu.Lock()
-	defer active.mu.Unlock()
-	return publicAttemptLocked(active)
-}
-
 func publicAttemptLocked(active *activeAttempt) Attempt {
 	result := active.Attempt
 	result.Devices = append([]Device(nil), active.Devices...)

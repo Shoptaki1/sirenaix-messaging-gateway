@@ -345,8 +345,8 @@ func assertReleaseWorkflowPolicy(t *testing.T, repositoryRoot string) {
 func assertCredentialScanPolicy(t *testing.T, repositoryRoot string) {
 	t.Helper()
 	expected := []string{
-		"9743919f4884327db998fe0f227c073f3f3aceb3:pkg/connector/push.go:generic-api-key:57",
-		"9743919f4884327db998fe0f227c073f3f3aceb3:pkg/libgm/util/constants.go:gcp-api-key:3",
+		"431a4c925e44a347fa695acb452dfe445fad39b2:pkg/connector/push.go:generic-api-key:57",
+		"431a4c925e44a347fa695acb452dfe445fad39b2:pkg/libgm/util/constants.go:gcp-api-key:3",
 	}
 	lines := nonemptyLines(readRepositoryTextFile(t, filepath.Join(repositoryRoot, ".gitleaksignore")))
 	if fmt.Sprint(lines) != fmt.Sprint(expected) {

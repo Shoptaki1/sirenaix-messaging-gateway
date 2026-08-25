@@ -187,10 +187,6 @@ func MapSettingsLines(connection domain.Connection, settings *gmproto.Settings) 
 	return result
 }
 
-func (adapter *Adapter) lineID(participantID string) domain.LineID {
-	return lineID(adapter.connection, participantID)
-}
-
 func lineID(connection domain.Connection, participantID string) domain.LineID {
 	digest := sha256.New()
 	for _, value := range []string{string(connection.TenantID), string(connection.ID), participantID} {

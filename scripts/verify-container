@@ -69,7 +69,7 @@ trap 'exit 130' HUP INT TERM
 expected_licenses="$probe_dir/expected-licenses"
 image_licenses="$probe_dir/image-licenses"
 mkdir -p "$expected_licenses" "$image_licenses"
-cp LICENSE NOTICE.md "$expected_licenses/"
+cp LICENSE LICENSE.exceptions NOTICE.md "$expected_licenses/"
 cp -R third_party "$expected_licenses/"
 container_id=$(docker create "$image")
 docker cp "$container_id:/usr/share/licenses/sirenaix-messaging-gateway/." "$image_licenses/"

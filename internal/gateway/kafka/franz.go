@@ -28,14 +28,14 @@ const (
 	correlationHeader  = "sirenaix-correlation-id"
 )
 
-var ErrInvalidFranzConfig = errors.New("invalid secure Kafka configuration")
-var ErrUnmappedCommandRecord = errors.New("Kafka command record has no trusted tenant binding")
-var ErrKafkaMetadataUnavailable = errors.New("Kafka readiness metadata unavailable")
-var ErrKafkaTopicMissing = errors.New("required Kafka topic unavailable")
-var ErrKafkaTopicUnauthorized = errors.New("required Kafka topic authorization unavailable")
-var ErrKafkaClusterUnauthorized = errors.New("required Kafka cluster authorization unavailable")
-var ErrKafkaGroupUnauthorized = errors.New("required Kafka consumer group authorization unavailable")
-var ErrKafkaAuthorizationUnverifiable = errors.New("Kafka readiness authorization unverifiable")
+var ErrInvalidFranzConfig = errors.New("invalid secure kafka configuration")
+var ErrUnmappedCommandRecord = errors.New("kafka command record has no trusted tenant binding")
+var ErrKafkaMetadataUnavailable = errors.New("kafka readiness metadata unavailable")
+var ErrKafkaTopicMissing = errors.New("required kafka topic unavailable")
+var ErrKafkaTopicUnauthorized = errors.New("required kafka topic authorization unavailable")
+var ErrKafkaClusterUnauthorized = errors.New("required kafka cluster authorization unavailable")
+var ErrKafkaGroupUnauthorized = errors.New("required kafka consumer group authorization unavailable")
+var ErrKafkaAuthorizationUnverifiable = errors.New("kafka readiness authorization unverifiable")
 
 type FranzConfig struct {
 	Brokers              []string

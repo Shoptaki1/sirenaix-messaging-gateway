@@ -2,6 +2,7 @@ name: Gateway API contracts
 
 on:
   push:
+    branches: [main]
     paths:
       - "internal/gateway/httpapi/**"
       - ".github/workflows/contracts.yml"

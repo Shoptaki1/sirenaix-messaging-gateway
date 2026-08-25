@@ -8,7 +8,7 @@ import (
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 )
 
-var ErrInvalidOutboxWorker = errors.New("invalid Kafka outbox worker configuration")
+var ErrInvalidOutboxWorker = errors.New("invalid kafka outbox worker configuration")
 
 type OutboxEvent struct {
 	EventID        string
@@ -79,10 +79,10 @@ func (worker *OutboxWorker) RunBatch(ctx context.Context) error {
 	}
 	for _, event := range events {
 		if event.TenantID != worker.tenantID {
-			return errors.New("Kafka store returned a cross-tenant event")
+			return errors.New("kafka store returned a cross-tenant event")
 		}
 		if event.EventID == "" || event.TenantID == "" || event.ConnectionID == "" || len(event.CanonicalBody) == 0 || len(event.CanonicalBody) > 1<<20 {
-			return errors.New("invalid Kafka outbox event")
+			return errors.New("invalid kafka outbox event")
 		}
 		if err := worker.publisher.Publish(ctx, EventRecord{
 			Topic: worker.topic, Key: []byte(event.EventID),

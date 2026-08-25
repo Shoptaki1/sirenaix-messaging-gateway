@@ -638,7 +638,7 @@ WITH reserved AS (
         WHERE poison_inbox.tenant_id = $1
           AND poison_inbox.connection_id = $3
           AND poison_inbox.poisoned
-    ), 0) + octet_length($6) <= $13)
+    ), 0) + octet_length($6::bytea) <= $13)
     ON CONFLICT (tenant_id, connection_id, provider_response_id) DO NOTHING
     RETURNING tenant_id, connection_id, provider_response_id
 )
@@ -646,7 +646,7 @@ INSERT INTO provider_inbox (
     tenant_id, inbox_id, connection_id, provider_response_id, envelope_digest,
     raw_envelope, poisoned, poison_reason, ack_pending, owner_id, fencing_token, received_at
 )
-SELECT $1, $2, $3, $4, $5, $6, $7, $8, NOT $14, $9, $10, $11
+SELECT $1, $2, $3, $4, $5, $6::bytea, $7, $8, NOT $14, $9, $10, $11
 FROM reserved`
 
 const insertProviderInboxConflictSQL = `/* op:insert_provider_inbox_conflict */
@@ -672,7 +672,7 @@ INSERT INTO provider_inbox_conflicts (
     tenant_id, conflict_id, connection_id, provider_response_id,
     conflicting_digest, conflicting_envelope_size, conflicting_raw_envelope
 )
-SELECT $1, $2, $3, $4, $5, octet_length($6), substring($6 FROM 1 FOR 256)
+SELECT $1, $2, $3, $4, $5, octet_length($6::bytea), substring($6::bytea FROM 1 FOR 256)
 WHERE EXISTS (SELECT 1 FROM conflicted_reservation WHERE disposition = 'inbox')
 ON CONFLICT (tenant_id, connection_id, provider_response_id) DO UPDATE
 SET occurrence_count = LEAST(provider_inbox_conflicts.occurrence_count + 1, 2147483647),

@@ -2,11 +2,11 @@ package gmessages
 
 import (
 	"bytes"
-	"crypto/elliptic"
+	"crypto/ecdh"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"io"
-	"math/big"
 	"net/url"
 	"strings"
 
@@ -170,13 +170,21 @@ func validP256PrivateKey(dBytes, xBytes, yBytes []byte) bool {
 	if len(dBytes) == 0 || len(dBytes) > 32 || len(xBytes) == 0 || len(xBytes) > 32 || len(yBytes) == 0 || len(yBytes) > 32 {
 		return false
 	}
-	curve := elliptic.P256()
-	d, x, y := new(big.Int).SetBytes(dBytes), new(big.Int).SetBytes(xBytes), new(big.Int).SetBytes(yBytes)
-	if d.Sign() <= 0 || d.Cmp(curve.Params().N) >= 0 || !curve.IsOnCurve(x, y) {
+	privateBytes := make([]byte, 32)
+	copy(privateBytes[len(privateBytes)-len(dBytes):], dBytes)
+	privateKey, err := ecdh.P256().NewPrivateKey(privateBytes)
+	if err != nil {
 		return false
 	}
-	expectedX, expectedY := curve.ScalarBaseMult(dBytes)
-	return expectedX.Cmp(x) == 0 && expectedY.Cmp(y) == 0
+	publicBytes := make([]byte, 65)
+	publicBytes[0] = 4
+	copy(publicBytes[1+32-len(xBytes):33], xBytes)
+	copy(publicBytes[33+32-len(yBytes):], yBytes)
+	publicKey, err := ecdh.P256().NewPublicKey(publicBytes)
+	if err != nil {
+		return false
+	}
+	return subtle.ConstantTimeCompare(privateKey.PublicKey().Bytes(), publicKey.Bytes()) == 1
 }
 
 func zero(value []byte) {

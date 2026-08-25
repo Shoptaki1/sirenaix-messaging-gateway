@@ -2401,7 +2401,8 @@ func TestPostgresIntegrationUpgradesLegacyPairingRowsSafely(t *testing.T) {
 	}
 	var forcedTables int
 	if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM pg_class
-        WHERE relname IN ('connections', 'connection_sessions')
+        WHERE relnamespace = current_schema()::regnamespace
+          AND relname IN ('connections', 'connection_sessions')
           AND relrowsecurity AND relforcerowsecurity`).Scan(&forcedTables); err != nil || forcedTables != 2 {
 		t.Fatalf("RLS/FORCE not restored on migrated tables: count=%d error=%v", forcedTables, err)
 	}
@@ -2577,7 +2578,8 @@ FOR EACH STATEMENT EXECUTE FUNCTION task7_fail_response_remediation()`); err != 
 	}
 	var forcedTables int
 	if err = conn.QueryRowContext(ctx, `SELECT count(*) FROM pg_class
-        WHERE relname IN ('connections', 'connection_leases', 'connection_actor_health',
+        WHERE relnamespace = current_schema()::regnamespace
+          AND relname IN ('connections', 'connection_leases', 'connection_actor_health',
                           'provider_inbox', 'provider_inbox_conflicts', 'provider_cursor_history', 'provider_cursor_budgets')
           AND relrowsecurity AND relforcerowsecurity`).Scan(&forcedTables); err != nil || forcedTables != 7 {
 		t.Fatalf("failed 0013 FORCE RLS tables = %d, %v", forcedTables, err)
@@ -2743,7 +2745,8 @@ func TestPostgresIntegration0013QuarantinesLegacyInvalidResponseIDsWithoutStoppi
 		t.Fatalf("unvalidated response constraints = %d, %v", invalidConstraints, err)
 	}
 	if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM pg_class
-        WHERE relname IN ('provider_inbox', 'provider_inbox_conflicts', 'provider_cursor_history',
+        WHERE relnamespace = current_schema()::regnamespace
+          AND relname IN ('provider_inbox', 'provider_inbox_conflicts', 'provider_cursor_history',
                           'provider_cursor_budgets', 'provider_response_id_quarantine')
           AND relrowsecurity AND relforcerowsecurity`).Scan(&forcedTables); err != nil || forcedTables != 5 {
 		t.Fatalf("response migration FORCE RLS tables = %d, %v", forcedTables, err)
@@ -3003,7 +3006,8 @@ func TestPostgresIntegration0015ReconcilesLegacyConflictsAndQuotasAtomically(t *
 	}
 	var forcedTables int
 	if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM pg_class
-        WHERE relname IN ('provider_inbox', 'provider_inbox_conflicts', 'provider_rejected_responses',
+        WHERE relnamespace = current_schema()::regnamespace
+          AND relname IN ('provider_inbox', 'provider_inbox_conflicts', 'provider_rejected_responses',
                           'provider_response_reservations', 'provider_response_overflow_audits',
                           'connections', 'connection_leases', 'connection_actor_health')
           AND relrowsecurity AND relforcerowsecurity`).Scan(&forcedTables); err != nil || forcedTables != 8 {
@@ -3101,7 +3105,8 @@ FOR EACH STATEMENT EXECUTE FUNCTION task7_fail_0015_reconciliation()`); err != n
 	}
 	var forcedTables int
 	if err = conn.QueryRowContext(ctx, `SELECT count(*) FROM pg_class
-        WHERE relname IN ('provider_inbox', 'provider_inbox_conflicts', 'provider_rejected_responses',
+        WHERE relnamespace = current_schema()::regnamespace
+          AND relname IN ('provider_inbox', 'provider_inbox_conflicts', 'provider_rejected_responses',
                           'connections', 'connection_leases', 'connection_actor_health')
           AND relrowsecurity AND relforcerowsecurity`).Scan(&forcedTables); err != nil || forcedTables != 6 {
 		t.Fatalf("failed 0015 FORCE RLS tables = %d, %v", forcedTables, err)
@@ -3209,7 +3214,8 @@ func TestPostgresIntegrationTask8MigrationRepairsLegacyReauthorizationDelivery(t
 	}
 	var forcedTables int
 	if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM pg_class
-        WHERE relname IN ('connections', 'gateway_events', 'event_outbox')
+        WHERE relnamespace = current_schema()::regnamespace
+          AND relname IN ('connections', 'gateway_events', 'event_outbox')
           AND relrowsecurity AND relforcerowsecurity`).Scan(&forcedTables); err != nil || forcedTables != 3 {
 		t.Fatalf("Task 8 repair FORCE RLS tables = %d, %v", forcedTables, err)
 	}

@@ -1617,12 +1617,21 @@ WHERE tenant_id = $1 AND connection_id = $2 AND ordering_key = $3 AND lane_token
 			t.Fatalf("create Task 7 webhook endpoint: %v", err)
 		}
 	}
-	webhookEnvelope, webhookEnvelopeErr := processEnvelope(
-		tenantA, connectionA, ownerA, leaseA.FencingToken,
-		"task7-webhook-response", []byte("task7-webhook-envelope"),
-	)
-	if webhookEnvelopeErr != nil || !webhookEnvelope.ACKEligible {
-		t.Fatalf("create Task 7 webhook event = (%+v, %v)", webhookEnvelope, webhookEnvelopeErr)
+	const webhookEventID = "task7-webhook-delivery"
+	if err = inTenantExec(ctx, repository, tenantA, func(tx transaction) error {
+		if _, insertErr := tx.ExecContext(ctx, `INSERT INTO gateway_events
+            (tenant_id, event_id, event_type, aggregate_type, aggregate_id, connection_id, canonical_body)
+            VALUES ($1, $2, 'task7.webhook', 'test', $2, $3, '{}'::bytea)`,
+			string(tenantA), webhookEventID, string(connectionA)); insertErr != nil {
+			return insertErr
+		}
+		_, insertErr := tx.ExecContext(ctx, `INSERT INTO event_outbox
+            (tenant_id, outbox_id, event_id, destination)
+            VALUES ($1, $2, $3, 'webhook')`,
+			string(tenantA), webhookEventID+":webhook", webhookEventID)
+		return insertErr
+	}); err != nil {
+		t.Fatalf("create Task 7 webhook event: %v", err)
 	}
 	deliveries, err := repository.Claim(ctx, tenantA, "task7-webhook-a", 1)
 	if err != nil || len(deliveries) != 1 {

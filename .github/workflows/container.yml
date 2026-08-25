@@ -1,0 +1,98 @@
+name: Gateway container
+
+on:
+  push:
+    paths:
+      - ".dockerignore"
+      - "Dockerfile"
+      - "cmd/**"
+      - "internal/**"
+      - "pkg/**"
+      - "third_party/**"
+      - "scripts/check-licenses"
+      - "scripts/generate-third-party-licenses"
+      - "scripts/verify-container"
+      - "go.mod"
+      - "go.sum"
+      - "LICENSE"
+      - "LICENSE.exceptions"
+      - "NOTICE.md"
+      - ".github/workflows/container.yml"
+  pull_request:
+    paths:
+      - ".dockerignore"
+      - "Dockerfile"
+      - "cmd/**"
+      - "internal/**"
+      - "pkg/**"
+      - "third_party/**"
+      - "scripts/check-licenses"
+      - "scripts/generate-third-party-licenses"
+      - "scripts/verify-container"
+      - "go.mod"
+      - "go.sum"
+      - "LICENSE"
+      - "LICENSE.exceptions"
+      - "NOTICE.md"
+      - ".github/workflows/container.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-scan:
+    name: Build, harden, scan, and inventory
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Build gateway image
+        run: >-
+          docker build --pull --file Dockerfile
+          --tag "sirenaix-gateway:${GITHUB_SHA}"
+          --label "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+          --label "org.opencontainers.image.revision=${GITHUB_SHA}"
+          --label "org.opencontainers.image.licenses=AGPL-3.0-or-later"
+          .
+
+      - name: Verify non-root, read-only gateway startup
+        run: ./scripts/verify-container "sirenaix-gateway:${GITHUB_SHA}"
+
+      - name: Block actionable high and critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.72.0
+          scan-type: image
+          image-ref: "sirenaix-gateway:${{ github.sha }}"
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: table
+          exit-code: 1
+          cache: false
+
+      - name: Generate CycloneDX image SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.72.0
+          scan-type: image
+          image-ref: "sirenaix-gateway:${{ github.sha }}"
+          scanners: vuln
+          format: cyclonedx
+          output: sirenaix-gateway.cdx.json
+          exit-code: 0
+          cache: false
+
+      - name: Upload image SBOM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sirenaix-gateway-sbom-${{ github.sha }}
+          path: sirenaix-gateway.cdx.json
+          if-no-files-found: error
+          retention-days: 14

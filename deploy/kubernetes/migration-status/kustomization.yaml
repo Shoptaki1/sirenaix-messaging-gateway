@@ -1,0 +1,6 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Use the same release identifier and image as the completed migration Job.
+nameSuffix: -REQUIRED_RELEASE_ID-status
+resources:
+  - job.yaml

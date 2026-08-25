@@ -1,0 +1,17 @@
+.idea
+
+# Legacy Matrix-bridge runtime output only. Deployment and API YAML are source.
+/config.yaml
+/registration.yaml
+
+*.session
+*.json
+!docs/testing/test-results/*.json
+*.db
+*.log
+*.log.gz
+*.bak
+
+/mautrix-gmessages
+/start
+/.gocache/

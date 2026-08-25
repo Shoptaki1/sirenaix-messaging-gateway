@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sirenaix-gateway
+data:
+  SIRENAIX_ENVIRONMENT: production
+  SIRENAIX_HTTP_ADDRESS: 0.0.0.0:8443
+  SIRENAIX_OPS_ADDRESS: 0.0.0.0:9090
+  SIRENAIX_TLS_CERT_FILE: /run/secrets/tls/tls.crt
+  SIRENAIX_TLS_KEY_FILE: /run/secrets/tls/tls.key
+  SIRENAIX_TENANTS: replace-tenant-id
+  SIRENAIX_OIDC_ISSUER: https://replace-oidc.example
+  SIRENAIX_OIDC_AUDIENCE: sirenaix-gateway
+  SIRENAIX_OIDC_TENANT_CLAIM: tenant_id
+  SIRENAIX_KEY_BACKEND: aws-kms
+  SIRENAIX_KMS_CURRENT_VERSION: "1"
+  SIRENAIX_AWS_REGION: replace-region
+  SIRENAIX_OBJECT_BACKEND: s3
+  SIRENAIX_S3_BUCKET: replace-media-bucket
+  SIRENAIX_S3_EXPECTED_BUCKET_OWNER: replace-aws-account-id
+  SIRENAIX_PROVIDER_MEDIA_HOSTS: instantmessaging-pa.googleapis.com
+  SIRENAIX_MEDIA_TEMP_DIRECTORY: /tmp
+  SIRENAIX_DB_MAX_OPEN_CONNS: "32"
+  SIRENAIX_DB_MAX_IDLE_CONNS: "8"
+  SIRENAIX_DB_CONN_MAX_LIFETIME: 30m
+  SIRENAIX_DB_CONN_MAX_IDLE_TIME: 5m

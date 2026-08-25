@@ -1,0 +1,54 @@
+name: Gateway actor load simulation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  GOTOOLCHAIN: local
+
+permissions:
+  contents: read
+
+jobs:
+  simulated-actors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    name: 1,000 actors (race)
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.26.6"
+          cache: true
+
+      - name: Run deterministic actor simulation under the race detector
+        env:
+          CGO_ENABLED: "1"
+          SIRENAIX_LOADTEST_SOURCE_REVISION: ${{ github.sha }}
+          SIRENAIX_LOADTEST_SUMMARY_PATH: ${{ runner.temp }}/sirenaix-loadtest-summary.json
+        run: >-
+          go test -race -tags=loadtest -count=1 -v -timeout=9m
+          -run '^TestSimulated1000Actors$'
+          ./internal/gateway/connectionactor
+
+      - name: Add redacted result to the job summary
+        run: |
+          echo '### Redacted 1,000-actor result' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/sirenaix-loadtest-summary.json" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload machine-readable result
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sirenaix-loadtest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sirenaix-loadtest-summary.json
+          if-no-files-found: error
+          retention-days: 14

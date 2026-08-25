@@ -1,0 +1,50 @@
+name: Gateway PostgreSQL integration
+
+on:
+  push:
+  pull_request:
+
+env:
+  GOTOOLCHAIN: local
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+        env:
+          POSTGRES_DB: sirenaix_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sirenaix_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.26.6"
+          cache: true
+
+      - name: Run gateway PostgreSQL integration suite
+        env:
+          SIRENAIX_POSTGRES_TEST_DSN: postgres://postgres:postgres@localhost:5432/sirenaix_test?sslmode=disable
+        run: >-
+          go test -count=1 -tags=postgres_integration
+          ./internal/gateway/store/postgres
+          ./internal/gateway/app
+          ./internal/gateway/provider/gmessages
+          -run TestPostgresIntegration

@@ -1,0 +1,916 @@
+openapi: 3.0.3
+info:
+  title: SirenaIX Messaging Gateway API
+  version: 1.0.0
+  description: |
+    Tenant-scoped connection, pairing, and contact metadata operations. Deploy
+    behind HTTPS. Google Messages pairing uses the official app on a physical,
+    online Android phone; it needs no custom APK or continuously open laptop.
+    Encrypted sessions survive ordinary gateway restarts, but Google may revoke
+    them and require the explicit reauthorization flow.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+paths:
+  /v1/connections:
+    get:
+      operationId: listConnections
+      summary: List the authenticated tenant's connections
+      parameters:
+        - {name: after, in: query, schema: {type: string, maxLength: 256}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+      responses:
+        '200':
+          description: Connections
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [connections]
+                properties:
+                  connections:
+                    type: array
+                    items: {$ref: '#/components/schemas/Connection'}
+                  next_cursor: {type: string}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+    post:
+      operationId: createConnection
+      summary: Create an unpaired Google Messages physical-phone connection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [display_label]
+              properties:
+                display_label: {type: string, minLength: 1, maxLength: 128}
+      responses:
+        '201': {description: Unpaired connection created, content: {application/json: {schema: {$ref: '#/components/schemas/Connection'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+  /v1/connections/{connection_id}/health:
+    parameters:
+      - $ref: '#/components/parameters/ConnectionID'
+    get:
+      operationId: getConnectionHealth
+      summary: Read connection state and reauthorization requirement
+      responses:
+        '200':
+          description: Connection health state
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectionHealth'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+  /v1/connections/{connection_id}/lines:
+    parameters:
+      - $ref: '#/components/parameters/ConnectionID'
+    get:
+      operationId: listConnectionLines
+      summary: List the active provider-discovered SIM snapshot
+      description: Retired lines referenced by durable messages remain internal and are not returned or eligible for new sends.
+      responses:
+        '200':
+          description: Lines
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [lines, routing_capabilities]
+                properties:
+                  lines:
+                    type: array
+                    items: {$ref: '#/components/schemas/Line'}
+                  routing_capabilities: {$ref: '#/components/schemas/LineRoutingCapabilities'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+  /v1/connections/{connection_id}/contacts:sync:
+    parameters:
+      - $ref: '#/components/parameters/ConnectionID'
+    post:
+      operationId: syncConnectionContacts
+      summary: Manually import provider contact names
+      responses:
+        '200':
+          description: Safe synchronization summary
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ContactSyncSummary'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+  /v1/connections/{connection_id}/pairing/start:
+    parameters:
+      - $ref: '#/components/parameters/ConnectionID'
+    post:
+      operationId: startOrSelectGoogleMessagesPairing
+      summary: Start pairing with cookies or explicitly select a discovered device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/PairingCookieRequest'
+                - $ref: '#/components/schemas/PairingDeviceSelectionRequest'
+      responses:
+        '200': {description: Safe pairing state, content: {application/json: {schema: {$ref: '#/components/schemas/PairingAttempt'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '410': {$ref: '#/components/responses/Gone'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/connections/{connection_id}/pairing/complete:
+    parameters:
+      - $ref: '#/components/parameters/ConnectionID'
+    post:
+      operationId: completeGoogleMessagesPairing
+      summary: Finish pairing after approval on the selected physical phone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PairingIDRequest'}
+      responses:
+        '200': {description: Pairing completed after encrypted persistence, content: {application/json: {schema: {$ref: '#/components/schemas/PairingAttempt'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '410': {$ref: '#/components/responses/Gone'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/connections/{connection_id}/pairing/cancel:
+    parameters:
+      - $ref: '#/components/parameters/ConnectionID'
+    post:
+      operationId: cancelGoogleMessagesPairing
+      summary: Cancel and clear an in-memory pairing attempt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PairingIDRequest'}
+      responses:
+        '204': {description: Pairing attempt cancelled}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '410': {$ref: '#/components/responses/Gone'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/connections/{connection_id}/reauthorize:
+    parameters:
+      - $ref: '#/components/parameters/ConnectionID'
+    post:
+      operationId: reauthorizeGoogleMessagesConnection
+      summary: Return the safe next action for explicit reauthorization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, additionalProperties: false}
+      responses:
+        '200':
+          description: Pairing route to use for replacement authorization
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [next_action, path]
+                properties:
+                  next_action: {type: string, enum: [post_pairing_start]}
+                  path: {type: string}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+  /v1/connections/{connection_id}/messages:
+    parameters:
+      - $ref: '#/components/parameters/ConnectionID'
+    post:
+      operationId: submitMessage
+      summary: Queue one idempotent outbound message
+      description: |
+        Existing conversations and groups use the phone-selected transport and
+        default outgoing SIM route. New chats are one-to-one E.164 only and
+        require route_mode=phone_default with line_id omitted. Relay acceptance
+        is provider_accepted, not carrier delivery. Because Google exposes no
+        provider idempotency guarantee, an ambiguous dispatch is uncertain and
+        is never blindly retried.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SendMessageRequest'}
+      responses:
+        '202': {description: Message durably queued, content: {application/json: {schema: {$ref: '#/components/schemas/Message'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/messages:
+    get:
+      operationId: listMessages
+      parameters:
+        - {name: after, in: query, required: false, schema: {type: string}}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+      responses:
+        '200': {description: Bounded message page, content: {application/json: {schema: {$ref: '#/components/schemas/MessagePage'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/messages/{message_id}:
+    parameters:
+      - $ref: '#/components/parameters/MessageID'
+    get:
+      operationId: getMessage
+      responses:
+        '200': {description: Message and conservative current status, content: {application/json: {schema: {$ref: '#/components/schemas/Message'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/media:
+    post:
+      operationId: uploadMedia
+      summary: Upload one bounded passive raster image
+      description: JPEG, PNG, GIF, or WebP only; SVG and active content are rejected.
+      requestBody:
+        required: true
+        content:
+          image/jpeg: {schema: {type: string, format: binary}}
+          image/png: {schema: {type: string, format: binary}}
+          image/gif: {schema: {type: string, format: binary}}
+          image/webp: {schema: {type: string, format: binary}}
+      responses:
+        '201': {description: Media stored, content: {application/json: {schema: {$ref: '#/components/schemas/Media'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/media/{media_id}:
+    parameters:
+      - $ref: '#/components/parameters/MediaID'
+    get:
+      operationId: getMediaMetadata
+      responses:
+        '200': {description: Tenant-owned media metadata, content: {application/json: {schema: {$ref: '#/components/schemas/Media'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/media/{media_id}/content:
+    parameters:
+      - $ref: '#/components/parameters/MediaID'
+    get:
+      operationId: downloadMedia
+      responses:
+        '200':
+          description: Controlled binary attachment using its verified passive image type
+          headers:
+            Content-Disposition: {schema: {type: string}, description: Always attachment with a sanitized display filename}
+            X-Content-Type-Options: {schema: {type: string, enum: [nosniff]}}
+          content:
+            image/jpeg: {schema: {type: string, format: binary}}
+            image/png: {schema: {type: string, format: binary}}
+            image/gif: {schema: {type: string, format: binary}}
+            image/webp: {schema: {type: string, format: binary}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/webhooks:
+    get:
+      operationId: listWebhooks
+      parameters:
+        - {name: after, in: query, schema: {type: string, maxLength: 256}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+      responses:
+        '200': {description: Webhook endpoints without secrets, content: {application/json: {schema: {type: object, properties: {webhooks: {type: array, items: {$ref: '#/components/schemas/WebhookEndpoint'}}, next_cursor: {type: string}}}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    post:
+      operationId: createWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, additionalProperties: false, required: [destination], properties: {destination: {type: string, format: uri}}}
+      responses:
+        '201': {description: Endpoint and one-time secret, content: {application/json: {schema: {$ref: '#/components/schemas/WebhookCreatedResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/webhooks/{webhook_id}:
+    parameters:
+      - $ref: '#/components/parameters/WebhookID'
+    delete:
+      operationId: deleteWebhook
+      responses:
+        '202':
+          description: Endpoint disabled; an already-started request is still draining
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status: {type: string, enum: [deleting]}
+        '204': {description: Endpoint disabled without deleting history}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/webhooks/{webhook_id}:rotate:
+    parameters:
+      - $ref: '#/components/parameters/WebhookID'
+    post:
+      operationId: rotateWebhookSecret
+      responses:
+        '200': {description: One-time replacement secret, content: {application/json: {schema: {$ref: '#/components/schemas/OneTimeWebhookSecret'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/webhooks/dlq/{dlq_id}:replay:
+    parameters:
+      - $ref: '#/components/parameters/DLQID'
+    post:
+      operationId: replayWebhookDLQ
+      responses:
+        '202': {description: Delivery retry cycle reset, content: {application/json: {schema: {type: object}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/contacts:
+    get:
+      operationId: listContacts
+      summary: List contacts with server metadata
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque cursor returned by the preceding page.
+          schema: {type: string, maxLength: 683}
+      responses:
+        '200':
+          description: Contact page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [contacts, next_cursor]
+                properties:
+                  contacts:
+                    type: array
+                    items: {$ref: '#/components/schemas/Contact'}
+                  next_cursor:
+                    type: string
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+    put:
+      operationId: upsertServerContact
+      summary: Idempotently create or update a tenant-local contact
+      description: Creates a contact for a canonical E.164 number before provider import, without writing any data back to the phone. Omitting server_alias preserves its current value; null or an empty string clears it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ServerContactUpsert'}
+      responses:
+        '200': {description: Tenant-local contact converged by phone number, content: {application/json: {schema: {$ref: '#/components/schemas/Contact'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /v1/contacts/{contact_id}:
+    parameters:
+      - $ref: '#/components/parameters/ContactID'
+    patch:
+      operationId: patchContact
+      summary: Set or clear the server-owned alias
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [server_alias]
+              properties:
+                server_alias:
+                  type: string
+                  nullable: true
+      responses:
+        '204': {description: Alias updated}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+  /v1/labels:
+    get:
+      operationId: listLabels
+      summary: List tenant-owned labels
+      responses:
+        '200':
+          description: Labels
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [labels]
+                properties:
+                  labels:
+                    type: array
+                    items: {$ref: '#/components/schemas/Label'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+    post:
+      operationId: createLabel
+      summary: Create or converge on a normalized tenant label
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: {type: string}
+      responses:
+        '200': {description: Existing normalized label, content: {application/json: {schema: {$ref: '#/components/schemas/Label'}}}}
+        '201': {description: Label created, content: {application/json: {schema: {$ref: '#/components/schemas/Label'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+  /v1/contacts/{contact_id}/labels/{label_id}:
+    parameters:
+      - $ref: '#/components/parameters/ContactID'
+      - $ref: '#/components/parameters/LabelID'
+    put:
+      operationId: attachContactLabel
+      summary: Idempotently attach a tenant label
+      responses:
+        '204': {description: Label attached}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+    delete:
+      operationId: detachContactLabel
+      summary: Idempotently detach a tenant label
+      responses:
+        '204': {description: Label detached or already absent}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '413': {$ref: '#/components/responses/RequestTooLarge'}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ConnectionID:
+      name: connection_id
+      in: path
+      required: true
+      schema: {type: string}
+    ContactID:
+      name: contact_id
+      in: path
+      required: true
+      schema: {type: string}
+    LabelID:
+      name: label_id
+      in: path
+      required: true
+      schema: {type: string}
+    MessageID:
+      name: message_id
+      in: path
+      required: true
+      schema: {type: string}
+    MediaID:
+      name: media_id
+      in: path
+      required: true
+      schema: {type: string}
+    WebhookID:
+      name: webhook_id
+      in: path
+      required: true
+      schema: {type: string}
+    DLQID:
+      name: dlq_id
+      in: path
+      required: true
+      schema: {type: string}
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: {type: string, minLength: 1, maxLength: 200}
+  responses:
+    InvalidRequest:
+      description: Invalid request
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    Unauthorized:
+      description: Missing or invalid bearer token
+      headers:
+        WWW-Authenticate: {schema: {type: string}}
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    Forbidden:
+      description: Required scope missing
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    NotFound:
+      description: Tenant-owned object was not found
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    MethodNotAllowed:
+      description: Method is not allowed for the resource
+      headers:
+        Allow: {schema: {type: string}}
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    RequestTooLarge:
+      description: Request body exceeds the supported size
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    UnsupportedMediaType:
+      description: Request body must use application/json
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    Conflict:
+      description: Pairing state conflict
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    Gone:
+      description: Pairing attempt expired
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    InternalError:
+      description: Pairing or persistence operation failed safely
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+  schemas:
+    Connection:
+      type: object
+      required: [id, name, state]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        state: {$ref: '#/components/schemas/ConnectionState'}
+    SendMessageRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        conversation_id: {type: string}
+        recipient: {type: string, pattern: '^\+[1-9][0-9]{7,14}$'}
+        line_id: {type: string}
+        route_mode: {type: string, enum: [phone_default]}
+        text: {type: string, maxLength: 65536}
+        media_ids: {type: array, maxItems: 16, uniqueItems: true, items: {type: string}}
+    Message:
+      type: object
+      required: [id, connection_id, direction, state, text, created_at]
+      properties:
+        id: {type: string}
+        connection_id: {type: string}
+        conversation_id: {type: string, description: Present after an existing conversation is selected or a new chat is resolved by the phone.}
+        direction: {type: string, enum: [inbound, outbound, unknown]}
+        provider_message_id: {type: string, description: Provider identity when observed; absent before remote evidence.}
+        transport:
+          type: string
+          enum: [sms, mms, rcs]
+          description: Observed provider transport only. Callers cannot select or force SMS, MMS, or RCS.
+        recipient: {type: string}
+        line_id: {type: string}
+        route_mode: {type: string}
+        text: {type: string}
+        media_ids: {type: array, items: {type: string}}
+        attachments:
+          type: array
+          maxItems: 16
+          items: {$ref: '#/components/schemas/MessageAttachment'}
+        state: {$ref: '#/components/schemas/MessageState'}
+        created_at: {type: string, format: date-time}
+    MessageAttachment:
+      type: object
+      additionalProperties: false
+      required: [media_id, position]
+      properties:
+        media_id: {type: string}
+        position: {type: integer, minimum: 0, maximum: 15}
+    MessageState:
+      type: string
+      description: Relay/phone acceptance never implies carrier delivery.
+      enum: [queued, dispatching, provider_accepted, awaiting_phone, sent, delivered, read, uncertain, failed]
+    MessagePage:
+      type: object
+      required: [messages]
+      properties:
+        messages: {type: array, items: {$ref: '#/components/schemas/Message'}}
+        next_cursor: {type: string}
+    Media:
+      type: object
+      description: Inbound media is visible as pending before bytes and decoded dimensions are available.
+      required: [id, state, display_filename, created_at]
+      properties:
+        id: {type: string}
+        state: {type: string, enum: [pending, ready, failed]}
+        mime_type: {type: string, enum: [image/jpeg, image/png, image/gif, image/webp]}
+        size: {type: integer, format: int64, maximum: 26214400}
+        width: {type: integer, minimum: 1}
+        height: {type: integer, minimum: 1}
+        display_filename: {type: string}
+        created_at: {type: string, format: date-time}
+        content_path: {type: string}
+    WebhookEndpoint:
+      type: object
+      required: [id, destination, key_id, active, created_at]
+      properties:
+        id: {type: string}
+        destination: {type: string, format: uri}
+        key_id: {type: string}
+        active: {type: boolean}
+        created_at: {type: string, format: date-time}
+    OneTimeWebhookSecret:
+      type: object
+      additionalProperties: false
+      required: [secret]
+      properties:
+        secret:
+          type: string
+          minLength: 43
+          maxLength: 43
+          readOnly: true
+          description: Base64url secret revealed only in this response. Store it now; it cannot be retrieved later.
+    WebhookCreatedResponse:
+      type: object
+      additionalProperties: false
+      required: [endpoint, secret]
+      properties:
+        endpoint: {$ref: '#/components/schemas/WebhookEndpoint'}
+        secret:
+          type: string
+          minLength: 43
+          maxLength: 43
+          readOnly: true
+          description: Base64url secret revealed only in this response. Store it now; it cannot be retrieved later.
+    ConnectionHealth:
+      type: object
+      required: [connection_id, state, requires_reauthorization]
+      properties:
+        connection_id: {type: string}
+        state: {$ref: '#/components/schemas/ConnectionState'}
+        requires_reauthorization: {type: boolean}
+        actor_state: {type: string, enum: [acquiring, connecting, ready, backoff, stopped, lease-lost]}
+        lease_state: {type: string, enum: [owned, inactive]}
+        connected_at: {type: string, format: date-time}
+        last_frame_at: {type: string, format: date-time}
+        last_phone_response_at: {type: string, format: date-time}
+        reconnect_count: {type: integer, format: int64, minimum: 0}
+        current_backoff_ms: {type: integer, format: int64, minimum: 0}
+        last_safe_reason: {type: string, enum: [none, transient-network, provider-auth, provider-config, provider-protocol, lease-lost, session-conflict, shutdown]}
+    ConnectionState:
+      type: string
+      enum: [unpaired, pairing, connected, degraded, reauthorization-required, suspended, disconnected]
+    PairingCookieRequest:
+      type: object
+      additionalProperties: false
+      required: [cookies]
+      properties:
+        cookies:
+          type: object
+          additionalProperties: false
+          required: [SID, HSID, OSID, SSID, APISID, SAPISID]
+          properties:
+            SID: {type: string, minLength: 1}
+            HSID: {type: string, minLength: 1}
+            OSID: {type: string, minLength: 1}
+            SSID: {type: string, minLength: 1}
+            APISID: {type: string, minLength: 1}
+            SAPISID: {type: string, minLength: 1}
+    PairingDeviceSelectionRequest:
+      type: object
+      additionalProperties: false
+      required: [pairing_id, selected_device_id]
+      properties:
+        pairing_id: {type: string, minLength: 8, maxLength: 128, pattern: '^[A-Za-z0-9_-]{8,128}$'}
+        selected_device_id: {type: string, minLength: 1, maxLength: 256, pattern: '^[!-~]{1,256}$'}
+    PairingIDRequest:
+      type: object
+      additionalProperties: false
+      required: [pairing_id]
+      properties:
+        pairing_id: {type: string, minLength: 8, maxLength: 128, pattern: '^[A-Za-z0-9_-]{8,128}$'}
+    PairingDevice:
+      type: object
+      additionalProperties: false
+      required: [id, label]
+      properties:
+        id: {type: string, minLength: 1, maxLength: 256, pattern: '^[!-~]{1,256}$'}
+        label: {type: string}
+    PairingAttempt:
+      type: object
+      additionalProperties: false
+      required: [pairing_id, state, expires_at]
+      properties:
+        pairing_id: {type: string, minLength: 8, maxLength: 128, pattern: '^[A-Za-z0-9_-]{8,128}$'}
+        state:
+          type: string
+          enum: [awaiting_device_selection, awaiting_phone_approval, complete, expired, cancelled, failed]
+        expires_at: {type: string, format: date-time}
+        devices:
+          type: array
+          items: {$ref: '#/components/schemas/PairingDevice'}
+        emoji: {type: string}
+    Line:
+      type: object
+      additionalProperties: false
+      required: [id, connection_id, phone, display_name, rcs_enabled, provider_sim_number, provider_sim_payload_type, discovery_source]
+      properties:
+        id: {type: string}
+        connection_id: {type: string}
+        phone: {type: string, maxLength: 16, pattern: '^\+[1-9][0-9]{1,14}$', example: '+12025550101'}
+        display_name: {type: string}
+        carrier_name: {type: string, maxLength: 255}
+        color_hex: {type: string, maxLength: 64}
+        rcs_enabled: {type: boolean}
+        provider_sim_number: {type: integer, format: int32}
+        provider_sim_payload_type: {type: integer, format: int32}
+        discovery_source:
+          type: string
+          enum: [legacy_unknown, authenticated_google_settings]
+    LineRoutingCapabilities:
+      type: object
+      additionalProperties: false
+      required: [explicit_line_send, new_conversation_line_selection, new_conversation_route]
+      properties:
+        explicit_line_send:
+          type: string
+          enum: [existing_conversation_match_only]
+        new_conversation_line_selection:
+          type: boolean
+          enum: [false]
+        new_conversation_route:
+          type: string
+          enum: [phone_default]
+    ServerContactUpsert:
+      type: object
+      additionalProperties: false
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          maxLength: 16
+          pattern: '^\+[1-9][0-9]{1,14}$'
+        server_alias:
+          type: string
+          nullable: true
+          maxLength: 256
+          description: UTF-8 value limited to 256 bytes; omitted preserves the existing server alias.
+    Contact:
+      type: object
+      required: [id, phone, provider_name, server_alias, effective_display_name, labels]
+      properties:
+        id: {type: string}
+        phone: {type: string, example: '+12025550140'}
+        provider_name: {type: string}
+        server_alias: {type: string}
+        effective_display_name: {type: string}
+        labels:
+          type: array
+          items: {$ref: '#/components/schemas/Label'}
+    Label:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        slug: {type: string, example: potential-client}
+    ContactSyncSummary:
+      type: object
+      required: [accepted, quarantined, reasons]
+      properties:
+        accepted: {type: integer, minimum: 0}
+        quarantined: {type: integer, minimum: 0}
+        reasons:
+          type: object
+          additionalProperties: {type: integer, minimum: 0}
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            request_id: {type: string}

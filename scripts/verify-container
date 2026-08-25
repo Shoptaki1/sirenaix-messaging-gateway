@@ -1,0 +1,105 @@
+#!/usr/bin/env sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repository_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
+cd "$repository_root"
+
+image=${1:-}
+if [ -z "$image" ]; then
+	echo "usage: scripts/verify-container IMAGE" >&2
+	exit 2
+fi
+if ! printf '%s' "$image" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._/@:-]{0,254}$'; then
+	echo "verify-container: invalid image reference" >&2
+	exit 2
+fi
+if ! command -v docker >/dev/null 2>&1; then
+	echo "verify-container: Docker is required" >&2
+	exit 2
+fi
+
+user=$(docker image inspect --format '{{.Config.User}}' "$image")
+case "$user" in
+	""|0|0:*|root|root:*)
+		echo "verify-container: image must declare a non-root USER" >&2
+		exit 1
+		;;
+esac
+
+command=$(docker image inspect --format '{{json .Config.Entrypoint}} {{json .Config.Cmd}}' "$image")
+if ! printf '%s\n' "$command" | grep -Fq 'sirenaix-gateway'; then
+	echo "verify-container: default command is not the SirenaIX gateway" >&2
+	exit 1
+fi
+
+license=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}' "$image")
+source_url=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.source"}}' "$image")
+revision=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image")
+if [ "$license" != "AGPL-3.0-or-later" ]; then
+	echo "verify-container: OCI license label must be AGPL-3.0-or-later" >&2
+	exit 1
+fi
+if ! printf '%s\n' "$source_url" | grep -Eq '^https://github\.com/[^/[:space:]]+/[^/[:space:]]+$'; then
+	echo "verify-container: OCI source label must identify the GitHub repository" >&2
+	exit 1
+fi
+if ! printf '%s\n' "$revision" | grep -Eq '^[0-9a-f]{40}$'; then
+	echo "verify-container: OCI revision label must be a full Git commit SHA" >&2
+	exit 1
+fi
+
+configured_env=$(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$image")
+if printf '%s\n' "$configured_env" | grep -Eq '^SIRENAIX_[A-Z0-9_]*(TOKEN|SECRET|PASSWORD|DATABASE_URL|MASTER_KEY|CLIENT_KEY|CLIENT_CERT|KMS_KEYS)[A-Z0-9_]*=.+$'; then
+	echo "verify-container: secret-like SirenaIX configuration is baked into the image" >&2
+	exit 1
+fi
+
+probe_dir=$(mktemp -d)
+container_id=
+cleanup() {
+	if [ -n "$container_id" ]; then
+		docker rm -f "$container_id" >/dev/null 2>&1 || true
+	fi
+	rm -rf "$probe_dir"
+}
+trap cleanup EXIT
+trap 'exit 130' HUP INT TERM
+
+expected_licenses="$probe_dir/expected-licenses"
+image_licenses="$probe_dir/image-licenses"
+mkdir -p "$expected_licenses" "$image_licenses"
+cp LICENSE NOTICE.md "$expected_licenses/"
+cp -R third_party "$expected_licenses/"
+container_id=$(docker create "$image")
+docker cp "$container_id:/usr/share/licenses/sirenaix-messaging-gateway/." "$image_licenses/"
+docker rm "$container_id" >/dev/null
+container_id=
+if ! diff -ru "$expected_licenses" "$image_licenses"; then
+	echo "verify-container: image license distribution differs from the audited repository bundle" >&2
+	exit 1
+fi
+
+set +e
+docker run --rm \
+	--read-only \
+	--network none \
+	--cap-drop ALL \
+	--security-opt no-new-privileges \
+	--pids-limit 64 \
+	--memory 128m \
+	--tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m \
+	"$image" >"$probe_dir/stdout" 2>"$probe_dir/stderr"
+probe_status=$?
+set -e
+
+if [ "$probe_status" -ne 1 ]; then
+	echo "verify-container: constrained startup returned an unexpected status" >&2
+	exit 1
+fi
+if [ -s "$probe_dir/stdout" ] || ! grep -Fxq 'sirenaix-gateway stopped safely; inspect bounded service metrics' "$probe_dir/stderr"; then
+	echo "verify-container: constrained startup did not fail through the safe configuration path" >&2
+	exit 1
+fi
+
+echo "verify-container: image policy passed"

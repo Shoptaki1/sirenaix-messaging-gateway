@@ -1,0 +1,6 @@
+pkg/libgm/gmproto/*.pb.go linguist-generated=true
+pkg/libgm/gmproto/*.pb.raw binary linguist-generated=true
+
+# This directory is a byte-audited distribution artifact containing both text
+# and binary corresponding source. Do not transform it during checkout.
+third_party/licenses/** -text whitespace=-blank-at-eof

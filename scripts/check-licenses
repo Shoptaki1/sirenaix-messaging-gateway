@@ -1,0 +1,60 @@
+#!/usr/bin/env sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repository_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
+cd "$repository_root"
+
+if ! command -v go >/dev/null 2>&1; then
+	echo "check-licenses: Go is required" >&2
+	exit 2
+fi
+if ! command -v go-licenses >/dev/null 2>&1; then
+	echo "check-licenses: install github.com/google/go-licenses@v1.6.0" >&2
+	exit 2
+fi
+if ! command -v diff >/dev/null 2>&1 || ! command -v sha256sum >/dev/null 2>&1; then
+	echo "check-licenses: diff and sha256sum are required" >&2
+	exit 2
+fi
+if [ ! -f LICENSE ] || ! grep -Fq "GNU AFFERO GENERAL PUBLIC LICENSE" LICENSE; then
+	echo "check-licenses: repository AGPL license is missing" >&2
+	exit 1
+fi
+if [ ! -f NOTICE.md ] || ! grep -Fq "mautrix/gmessages" NOTICE.md; then
+	echo "check-licenses: upstream attribution is missing from NOTICE.md" >&2
+	exit 1
+fi
+
+export GOTOOLCHAIN=local
+export GOFLAGS="${GOFLAGS:+$GOFLAGS }-mod=readonly"
+
+# Limit this gate to the two production Linux gateway commands. The legacy
+# Matrix bridge has a separate CGO/package surface and remains covered by its
+# existing CI.
+for architecture in amd64 arm64; do
+	GOOS=linux GOARCH="$architecture" CGO_ENABLED=0 \
+		go list -deps ./cmd/sirenaix-gateway >/dev/null
+	GOOS=linux GOARCH="$architecture" CGO_ENABLED=0 \
+		go-licenses check ./cmd/sirenaix-gateway \
+		--disallowed_types=forbidden,unknown \
+		--ignore=go.mau.fi/mautrix-gmessages
+done
+
+generated_bundle=$(mktemp -d)
+trap 'rm -rf "$generated_bundle"' EXIT
+trap 'exit 130' HUP INT TERM
+rm -rf "$generated_bundle"
+"$script_dir/generate-third-party-licenses" "$generated_bundle"
+
+if find third_party/licenses -type l -print -quit | grep -q .; then
+	echo "check-licenses: committed bundle contains a symbolic link" >&2
+	exit 1
+fi
+(
+	cd third_party/licenses
+	sha256sum --check MANIFEST.sha256 >/dev/null
+)
+diff -ru third_party/licenses "$generated_bundle"
+
+echo "check-licenses: gateway dependencies and distribution bundle passed"

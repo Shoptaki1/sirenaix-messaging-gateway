@@ -1,0 +1,100 @@
+name: sirenaix-gateway-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    environment:
+      POSTGRES_DB: sirenaix
+      POSTGRES_USER: sirenaix
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sirenaix -d sirenaix"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [backend]
+
+  migrate:
+    build:
+      context: ../..
+      args:
+        VERSION: ${SIRENAIX_VERSION:-dev}
+        REVISION: ${SIRENAIX_REVISION:-compose}
+        BUILD_DATE: ${SIRENAIX_BUILD_DATE:-1970-01-01T00:00:00Z}
+    command: ["migrate", "up"]
+    environment:
+      SIRENAIX_MIGRATION_DATABASE_URL: postgres://sirenaix:${POSTGRES_PASSWORD}@postgres:5432/sirenaix?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [backend]
+
+  tenant-init:
+    build:
+      context: ../..
+      args:
+        VERSION: ${SIRENAIX_VERSION:-dev}
+        REVISION: ${SIRENAIX_REVISION:-compose}
+        BUILD_DATE: ${SIRENAIX_BUILD_DATE:-1970-01-01T00:00:00Z}
+    command: ["tenant", "provision", "--id", "${SIRENAIX_DEV_TENANT:-demo}", "--name", "${SIRENAIX_DEV_TENANT_NAME:-Demo tenant}", "--max-connections", "${SIRENAIX_DEV_MAX_CONNECTIONS:-8}"]
+    environment:
+      SIRENAIX_ADMIN_DATABASE_URL: postgres://sirenaix:${POSTGRES_PASSWORD}@postgres:5432/sirenaix?sslmode=disable
+      SIRENAIX_ADMIN_ACTOR: compose/tenant-init
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [backend]
+
+  gateway:
+    build:
+      context: ../..
+      args:
+        VERSION: ${SIRENAIX_VERSION:-dev}
+        REVISION: ${SIRENAIX_REVISION:-compose}
+        BUILD_DATE: ${SIRENAIX_BUILD_DATE:-1970-01-01T00:00:00Z}
+    command: ["serve"]
+    environment:
+      SIRENAIX_ENVIRONMENT: development
+      SIRENAIX_OWNER_ID: compose-gateway-1
+      SIRENAIX_HTTP_ADDRESS: 0.0.0.0:8080
+      SIRENAIX_OPS_ADDRESS: 0.0.0.0:9090
+      SIRENAIX_DATABASE_URL: postgres://sirenaix:${POSTGRES_PASSWORD}@postgres:5432/sirenaix?sslmode=disable
+      SIRENAIX_TENANTS: ${SIRENAIX_DEV_TENANT:-demo}
+      SIRENAIX_OIDC_ISSUER: ${SIRENAIX_DEV_OIDC_ISSUER:?set an HTTPS development OIDC issuer}
+      SIRENAIX_OIDC_AUDIENCE: ${SIRENAIX_DEV_OIDC_AUDIENCE:?set the OIDC audience}
+      SIRENAIX_OIDC_TENANT_CLAIM: ${SIRENAIX_DEV_OIDC_TENANT_CLAIM:-tenant_id}
+      SIRENAIX_KEY_BACKEND: local
+      SIRENAIX_DEV_MASTER_KEY_B64: ${SIRENAIX_DEV_MASTER_KEY_B64:?set a base64-encoded 32-byte development key}
+      SIRENAIX_OBJECT_BACKEND: local
+      SIRENAIX_DEV_OBJECT_ROOT: /var/lib/sirenaix/objects
+      SIRENAIX_PROVIDER_MEDIA_HOSTS: ${SIRENAIX_PROVIDER_MEDIA_HOSTS:-instantmessaging-pa.googleapis.com}
+      SIRENAIX_MEDIA_TEMP_DIRECTORY: /tmp
+    depends_on:
+      tenant-init:
+        condition: service_completed_successfully
+    read_only: true
+    deploy:
+      replicas: 1
+    tmpfs:
+      - /tmp:size=256m,mode=1770,uid=65532,gid=65532
+      - /var/lib/sirenaix:size=512m,mode=0770,uid=65532,gid=65532
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:9090:9090"
+    networks: [backend]
+
+networks:
+  backend:
+
+volumes:
+  postgres-data:

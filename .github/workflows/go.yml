@@ -1,0 +1,158 @@
+name: Go
+
+on: [push, pull_request]
+
+env:
+  GOTOOLCHAIN: local
+
+permissions:
+  contents: read
+
+jobs:
+  workflow-policy:
+    runs-on: ubuntu-24.04
+    name: Workflow policy and actionlint
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.26.6"
+          cache: true
+
+      - name: Install pinned workflow validator
+        run: go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+
+      - name: Validate every workflow
+        run: actionlint
+
+      - name: Test release publication outside a Git checkout
+        run: ./scripts/test-publish-release
+
+      - name: Enforce repository workflow policy
+        run: go test ./internal/gateway/app -run '^TestCISupplyChainPolicy$'
+
+  race-lifecycle:
+    runs-on: ubuntu-latest
+    name: Race (messaging lifecycle)
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.26.6"
+          cache: true
+
+      # Packages come only from the GitHub runner's Ubuntu repositories. The
+      # mutable runner index is the remaining trust boundary; no third-party
+      # apt repository or recommended packages are permitted here.
+      - name: Install libolm
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libolm-dev libolm3
+
+      - name: Run messaging lifecycle race suite
+        run: >-
+          go test -race -count=1
+          ./internal/gateway/app
+          ./internal/gateway/connectionactor
+          ./internal/gateway/ingress
+          ./internal/gateway/kafka
+          ./internal/gateway/media/...
+          ./internal/gateway/messaging
+          ./internal/gateway/provider/gmessages
+          ./internal/gateway/webhook
+          ./pkg/libgm
+
+  vulnerability-scan:
+    runs-on: ubuntu-latest
+    name: Vulnerability scan
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.26.6"
+          cache: true
+
+      - name: Install libolm
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libolm-dev libolm3
+
+      - name: Install pinned govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
+
+      - name: Scan reachable Go vulnerabilities
+        run: govulncheck ./...
+
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ["1.25.7", "1.26.6"]
+    name: Lint ${{ matrix.go-version == '1.26.6' && '(latest)' || '(old)' }}
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Install libolm
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libolm-dev libolm3
+
+      - name: Install dependencies
+        run: |
+          go install golang.org/x/tools/cmd/goimports@v0.40.0
+          go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
+          export PATH="$HOME/go/bin:$PATH"
+
+      - name: Run pre-commit
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+
+  gateway-tests:
+    runs-on: ubuntu-latest
+    name: Gateway, provider boundary, and command tests
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.26.6"
+          cache: true
+
+      - name: Install libolm
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libolm-dev libolm3
+
+      - name: Run uncached gateway and provider-boundary tests
+        # A literal ./... also builds the legacy Matrix bridge command, whose
+        # SQLite/libolm CGO surface is outside the SirenaIX runtime and has
+        # platform-specific build constraints. This is the widest complete
+        # SirenaIX boundary: every gateway package, every libgm subpackage,
+        # and the production gateway command.
+        run: >-
+          go test -count=1
+          ./internal/gateway/...
+          ./pkg/libgm/...
+          ./cmd/sirenaix-gateway

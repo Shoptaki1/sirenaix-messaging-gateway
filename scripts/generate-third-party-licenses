@@ -1,0 +1,84 @@
+#!/usr/bin/env sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repository_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
+output=${1:-}
+
+if [ -z "$output" ]; then
+	echo "usage: scripts/generate-third-party-licenses OUTPUT_DIRECTORY" >&2
+	exit 2
+fi
+if [ -e "$output" ]; then
+	echo "generate-third-party-licenses: output already exists: $output" >&2
+	exit 2
+fi
+for command_name in go go-licenses diff find grep sha256sum sort; do
+	if ! command -v "$command_name" >/dev/null 2>&1; then
+		echo "generate-third-party-licenses: $command_name is required" >&2
+		exit 2
+	fi
+done
+
+temporary_root=$(mktemp -d)
+trap 'rm -rf "$temporary_root"' EXIT
+trap 'exit 130' HUP INT TERM
+amd64_bundle="$temporary_root/amd64"
+arm64_bundle="$temporary_root/arm64"
+amd64_modules="$temporary_root/modules-amd64.txt"
+arm64_modules="$temporary_root/modules-arm64.txt"
+
+cd "$repository_root"
+export GOTOOLCHAIN=local
+export GOFLAGS="${GOFLAGS:+$GOFLAGS }-mod=readonly"
+
+generate_bundle() {
+	architecture=$1
+	destination=$2
+	GOOS=linux GOARCH="$architecture" CGO_ENABLED=0 \
+		go-licenses save ./cmd/sirenaix-gateway \
+		--ignore=go.mau.fi/mautrix-gmessages \
+		--save_path="$destination"
+}
+
+generate_module_inventory() {
+	architecture=$1
+	destination=$2
+	GOOS=linux GOARCH="$architecture" CGO_ENABLED=0 \
+		go list -deps -f '{{with .Module}}{{if not .Main}}{{.Path}} {{.Version}}{{end}}{{end}}' \
+		./cmd/sirenaix-gateway |
+		grep -v '^$' |
+		LC_ALL=C sort -u >"$destination"
+}
+
+generate_bundle amd64 "$amd64_bundle"
+generate_bundle arm64 "$arm64_bundle"
+generate_module_inventory amd64 "$amd64_modules"
+generate_module_inventory arm64 "$arm64_modules"
+
+# The two supported release architectures must distribute the same dependency
+# notices and corresponding source. A platform-specific difference fails closed
+# until it is reviewed and deliberately represented in the release bundle.
+diff -ru "$amd64_bundle" "$arm64_bundle"
+diff -u "$amd64_modules" "$arm64_modules"
+if find "$amd64_bundle" -type l -print -quit | grep -q .; then
+	echo "generate-third-party-licenses: generated bundle contains a symbolic link" >&2
+	exit 1
+fi
+
+mkdir -p "$output"
+cp -R "$amd64_bundle/." "$output/"
+cp "$amd64_modules" "$output/MODULES.txt"
+(
+	cd "$output"
+	LC_ALL=C find . -type f ! -name MANIFEST.sha256 -print |
+		LC_ALL=C sort |
+		while IFS= read -r license_file; do
+			checksum=$(sha256sum "$license_file")
+			checksum=${checksum%% *}
+			printf '%s  %s\n' "$checksum" "$license_file"
+		done >MANIFEST.sha256
+	sha256sum --check MANIFEST.sha256 >/dev/null
+)
+
+echo "generate-third-party-licenses: wrote reviewed Linux gateway dependency bundle to $output"

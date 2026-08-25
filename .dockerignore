@@ -1,0 +1,12 @@
+.git
+.github
+.idea
+.gocache
+.superpowers
+deploy
+docs
+sources
+*.db
+*.log
+*.session
+start

@@ -1,0 +1,46 @@
+#!/usr/bin/env sh
+set -eu
+
+asset_directory=${1:-}
+repository=${GITHUB_REPOSITORY:-${GH_REPO:-}}
+tag=${GITHUB_REF_NAME:-}
+
+if [ -z "$asset_directory" ] || [ ! -d "$asset_directory" ]; then
+	echo "publish-release: release asset directory is required" >&2
+	exit 2
+fi
+if ! printf '%s\n' "$repository" | grep -Eq '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'; then
+	echo "publish-release: GITHUB_REPOSITORY must identify owner/repository" >&2
+	exit 2
+fi
+if ! printf '%s\n' "$tag" | grep -Eq '^v[0-9A-Za-z][0-9A-Za-z._+-]*$'; then
+	echo "publish-release: GITHUB_REF_NAME is not an allowed release tag" >&2
+	exit 2
+fi
+
+asset_directory=$(CDPATH= cd -- "$asset_directory" && pwd)
+for required_asset in checksums.txt checksums.txt.sigstore.json; do
+	if [ ! -f "$asset_directory/$required_asset" ]; then
+		echo "publish-release: missing $required_asset" >&2
+		exit 1
+	fi
+done
+archive_found=false
+for archive in "$asset_directory"/*.tar.gz; do
+	if [ -f "$archive" ]; then
+		archive_found=true
+	fi
+done
+if [ "$archive_found" != true ]; then
+	echo "publish-release: no release archive found" >&2
+	exit 1
+fi
+
+gh release create "$tag" \
+	"$asset_directory"/*.tar.gz \
+	"$asset_directory/checksums.txt" \
+	"$asset_directory/checksums.txt.sigstore.json" \
+	--repo "$repository" \
+	--verify-tag \
+	--title "SirenaIX Messaging Gateway $tag" \
+	--generate-notes

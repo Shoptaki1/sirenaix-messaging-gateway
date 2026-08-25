@@ -1,0 +1,117 @@
+name: Gateway security
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 7 * * 2"
+
+env:
+  GOTOOLCHAIN: local
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: CodeQL (gateway command)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.26.6"
+          cache: true
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.36.0
+        with:
+          languages: go
+          build-mode: manual
+          queries: security-extended
+
+      - name: Build the production gateway boundary
+        run: go build -trimpath ./cmd/sirenaix-gateway
+
+      - name: Analyze gateway code
+        uses: github/codeql-action/analyze@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.36.0
+        with:
+          category: "/language:go/gateway"
+
+  vulnerabilities:
+    name: Reachable Go vulnerabilities
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.26.6"
+          cache: true
+
+      - name: Install pinned govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
+
+      - name: Scan the production gateway command
+        run: govulncheck ./cmd/sirenaix-gateway
+
+  history-secrets:
+    name: Full-history credential scan
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.26.6"
+          cache: true
+
+      - name: Install pinned gitleaks
+        run: go install github.com/zricethezav/gitleaks/v8@v8.28.0
+
+      - name: Scan every reachable commit with reviewed fingerprints
+        run: gitleaks git --redact=100 --no-banner --ignore-gitleaks-allow --log-opts="--all" .
+
+  licenses:
+    name: Gateway dependency licenses
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.26.6"
+          cache: true
+
+      - name: Install pinned license classifier
+        run: go install github.com/google/go-licenses@v1.6.0
+
+      - name: Check production gateway dependency licenses
+        run: ./scripts/check-licenses

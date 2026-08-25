@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sirenaix-gateway
+spec:
+  # v1 pairing attempts and contact-sync actors are process-local. Scale-out
+  # requires owner-aware RPC and is intentionally unsupported for the pilot.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sirenaix-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sirenaix-gateway
+        sirenaix.ai/network-restricted: "true"
+    spec:
+      serviceAccountName: sirenaix-gateway
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: gateway
+          image: registry.invalid/sirenaix-gateway:REQUIRED_IMMUTABLE_RELEASE_IMAGE
+          imagePullPolicy: IfNotPresent
+          args: ["serve"]
+          envFrom:
+            - configMapRef:
+                name: sirenaix-gateway
+          env:
+            - name: SIRENAIX_OWNER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+            - name: SIRENAIX_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sirenaix-gateway-runtime
+                  key: database-url
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: sirenaix-gateway-runtime
+                  key: aws-access-key-id
+            - name: SIRENAIX_KMS_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: sirenaix-gateway-runtime
+                  key: kms-keys
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sirenaix-gateway-runtime
+                  key: aws-secret-access-key
+          ports:
+            - name: https
+              containerPort: 8443
+            - name: ops
+              containerPort: 9090
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: ops
+              scheme: HTTP
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: ops
+              scheme: HTTP
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /livez
+              port: ops
+              scheme: HTTP
+            periodSeconds: 2
+            timeoutSeconds: 1
+            failureThreshold: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+          volumeMounts:
+            - name: temporary
+              mountPath: /tmp
+            - name: tls
+              mountPath: /run/secrets/tls
+              readOnly: true
+      volumes:
+        - name: temporary
+          emptyDir:
+            sizeLimit: 256Mi
+        - name: tls
+          secret:
+            secretName: sirenaix-gateway-tls
+            defaultMode: 0440

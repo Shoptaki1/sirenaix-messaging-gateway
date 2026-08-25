@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+temporary_root=$(mktemp -d)
+trap 'rm -rf "$temporary_root"' EXIT
+trap 'exit 130' HUP INT TERM
+mkdir -p "$temporary_root/bin" "$temporary_root/assets" "$temporary_root/work"
+
+printf '%s\n' '#!/usr/bin/env sh' 'printf '\''%s\n'\'' "$@" >"$GH_CAPTURE"' >"$temporary_root/bin/gh"
+chmod +x "$temporary_root/bin/gh"
+: >"$temporary_root/assets/gateway_linux_amd64.tar.gz"
+: >"$temporary_root/assets/checksums.txt"
+: >"$temporary_root/assets/checksums.txt.sigstore.json"
+
+if git -C "$temporary_root/work" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+	echo "test-publish-release: temporary working directory unexpectedly belongs to a Git repository" >&2
+	exit 1
+fi
+cd "$temporary_root/work"
+PATH="$temporary_root/bin:$PATH" \
+	GH_CAPTURE="$temporary_root/gh-arguments" \
+	GITHUB_REPOSITORY=SirenaIX/test-gateway \
+	GITHUB_REF_NAME=v1.2.3 \
+	sh "$script_dir/publish-release" "$temporary_root/assets"
+
+for expected in \
+	release create v1.2.3 \
+	"$temporary_root/assets/gateway_linux_amd64.tar.gz" \
+	"$temporary_root/assets/checksums.txt" \
+	"$temporary_root/assets/checksums.txt.sigstore.json" \
+	--repo SirenaIX/test-gateway --verify-tag --generate-notes; do
+	if ! grep -Fxq -- "$expected" "$temporary_root/gh-arguments"; then
+		echo "test-publish-release: gh did not receive expected argument: $expected" >&2
+		exit 1
+	fi
+done
+
+echo "test-publish-release: explicit repository publication works outside a Git checkout"

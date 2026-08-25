@@ -1,0 +1,33 @@
+name: 'Lock old issues'
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+#  pull-requests: write
+#  discussions: write
+
+concurrency:
+  group: lock-threads
+
+jobs:
+  lock-stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dessant/lock-threads@89ae32b08ed1a541efecbab17912962a5e38981c # v6
+        id: lock
+        with:
+          issue-inactive-days: 90
+          process-only: issues
+      - name: Log processed threads
+        env:
+          LOCKED_ISSUES_JSON: ${{ steps.lock.outputs.issues }}
+        run: |
+          if [ -n "$LOCKED_ISSUES_JSON" ]; then
+            echo "Issues:"
+            printf '%s\n' "$LOCKED_ISSUES_JSON" | jq -r '.[] | "https://github.com/\(.owner)/\(.repo)/issues/\(.issue_number)"'
+          fi

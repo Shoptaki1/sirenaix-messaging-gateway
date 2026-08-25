@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "source_revision": "5095585818fa34dd51032e7ee6f8898318afb3a9",
+  "goos": "windows",
+  "goarch": "amd64",
+  "race_detector": false,
+  "actor_count": 1000,
+  "reconnect_actor_count": 100,
+  "reconnect_wave_size": 10,
+  "lease_renewals": 1000,
+  "operations": 1000,
+  "duration_ms": 29,
+  "operation_duration_ms": 3,
+  "shutdown_duration_ms": 1,
+  "goroutines_before": 2,
+  "goroutines_after": 2,
+  "heap_alloc_before_bytes": 804792,
+  "heap_alloc_after_bytes": 7364944,
+  "heap_growth_bytes": 6560152,
+  "max_active_generation_per_connection": 1,
+  "active_leases_after_shutdown": 0
+}

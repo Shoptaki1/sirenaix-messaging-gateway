@@ -380,32 +380,45 @@ func (repository *Repository) Claim(ctx context.Context, tenantID domain.TenantI
 		return nil, webhook.ErrInvalidWorker
 	}
 	return inTenant(ctx, repository, tenantID, func(tx transaction) ([]webhook.Delivery, error) {
-		rows, err := tx.QueryContext(ctx, claimWebhookDeliveriesSQL, string(tenantID), ownerID, limit)
-		if err != nil {
-			return nil, fmt.Errorf("claim webhook deliveries: %w", err)
-		}
-		defer rows.Close()
-		deliveries := make([]webhook.Delivery, 0, limit)
-		for rows.Next() {
-			var delivery webhook.Delivery
-			var tenant string
-			if err = rows.Scan(
-				&tenant, &delivery.DeliveryID, &delivery.EndpointID, &delivery.EventID,
-				&delivery.Destination, &delivery.KeyID, &delivery.CanonicalBody, &delivery.Attempt,
-				&delivery.OwnerID, &delivery.ClaimToken, &delivery.EndpointGeneration,
-				&delivery.Secret.Revision, &delivery.Secret.Version, &delivery.Secret.Provider,
-				&delivery.Secret.Ciphertext, &delivery.Secret.WrappedDEK, &delivery.Secret.Nonce,
-				&delivery.Secret.KeyID, &delivery.Secret.KeyVersion,
-			); err != nil {
-				return nil, fmt.Errorf("scan webhook delivery: %w", err)
+		// A data-modifying CTE cannot see rows inserted by a sibling CTE through
+		// the base table in the same PostgreSQL statement. The first pass may
+		// therefore materialize new endpoint/event pairs without returning a
+		// claim. A second pass in this transaction sees and leases those rows.
+		for pass := range 2 {
+			rows, err := tx.QueryContext(ctx, claimWebhookDeliveriesSQL, string(tenantID), ownerID, limit)
+			if err != nil {
+				return nil, fmt.Errorf("claim webhook deliveries: %w", err)
 			}
-			delivery.TenantID = domain.TenantID(tenant)
-			deliveries = append(deliveries, delivery)
+			deliveries := make([]webhook.Delivery, 0, limit)
+			for rows.Next() {
+				var delivery webhook.Delivery
+				var tenant string
+				if err = rows.Scan(
+					&tenant, &delivery.DeliveryID, &delivery.EndpointID, &delivery.EventID,
+					&delivery.Destination, &delivery.KeyID, &delivery.CanonicalBody, &delivery.Attempt,
+					&delivery.OwnerID, &delivery.ClaimToken, &delivery.EndpointGeneration,
+					&delivery.Secret.Revision, &delivery.Secret.Version, &delivery.Secret.Provider,
+					&delivery.Secret.Ciphertext, &delivery.Secret.WrappedDEK, &delivery.Secret.Nonce,
+					&delivery.Secret.KeyID, &delivery.Secret.KeyVersion,
+				); err != nil {
+					rows.Close()
+					return nil, fmt.Errorf("scan webhook delivery: %w", err)
+				}
+				delivery.TenantID = domain.TenantID(tenant)
+				deliveries = append(deliveries, delivery)
+			}
+			if err = rows.Err(); err != nil {
+				rows.Close()
+				return nil, fmt.Errorf("iterate webhook deliveries: %w", err)
+			}
+			if err = rows.Close(); err != nil {
+				return nil, fmt.Errorf("close webhook deliveries: %w", err)
+			}
+			if len(deliveries) > 0 || pass == 1 {
+				return deliveries, nil
+			}
 		}
-		if err = rows.Err(); err != nil {
-			return nil, fmt.Errorf("iterate webhook deliveries: %w", err)
-		}
-		return deliveries, nil
+		return nil, nil
 	})
 }
 

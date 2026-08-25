@@ -96,8 +96,30 @@ jobs:
       - name: Install pinned govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
 
+      - name: Download dependencies with retry
+        run: |
+          for attempt in 1 2 3; do
+            if go mod download; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
+
       - name: Scan reachable Go vulnerabilities
-        run: govulncheck ./...
+        run: |
+          for attempt in 1 2 3; do
+            if govulncheck ./...; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            go mod download || true
+            sleep $((attempt * 5))
+          done
 
   lint:
     runs-on: ubuntu-latest

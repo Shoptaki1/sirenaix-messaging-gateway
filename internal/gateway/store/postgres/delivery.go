@@ -547,6 +547,24 @@ func (repository *Repository) CompleteAttempt(ctx context.Context, result webhoo
 	return err
 }
 
+const materializeKafkaEventsSQL = `/* op:materialize_kafka_events */
+WITH locked_outbox AS MATERIALIZED (
+    SELECT outbox.outbox_id, outbox.event_id
+    FROM event_outbox AS outbox
+    WHERE outbox.tenant_id = $1 AND outbox.destination = 'kafka'
+      AND outbox.published_at IS NULL AND outbox.available_at <= clock_timestamp()
+      AND (outbox.claimed_by IS NULL OR outbox.claim_expires_at <= clock_timestamp())
+    ORDER BY outbox.available_at, outbox.outbox_id
+    FOR UPDATE OF outbox SKIP LOCKED
+    LIMIT $2
+)
+INSERT INTO kafka_event_deliveries (tenant_id, delivery_id, event_id, topic, partition_key)
+SELECT event.tenant_id, event.event_id || ':kafka', event.event_id, $3,
+       event.tenant_id || ':' || COALESCE(event.connection_id, '') || ':' || event.conversation_id
+FROM locked_outbox
+JOIN gateway_events AS event ON event.tenant_id = $1 AND event.event_id = locked_outbox.event_id
+ON CONFLICT (tenant_id, event_id, topic) DO NOTHING`
+
 const claimKafkaEventsSQL = `/* op:claim_kafka_events */
 WITH locked_outbox AS MATERIALIZED (
     SELECT outbox.outbox_id, outbox.event_id
@@ -557,14 +575,6 @@ WITH locked_outbox AS MATERIALIZED (
     ORDER BY outbox.available_at, outbox.outbox_id
     FOR UPDATE OF outbox SKIP LOCKED
     LIMIT $3
-), materialized AS MATERIALIZED (
-    INSERT INTO kafka_event_deliveries (tenant_id, delivery_id, event_id, topic, partition_key)
-    SELECT event.tenant_id, event.event_id || ':kafka', event.event_id, $4,
-           event.tenant_id || ':' || COALESCE(event.connection_id, '') || ':' || event.conversation_id
-    FROM locked_outbox
-    JOIN gateway_events AS event ON event.tenant_id = $1 AND event.event_id = locked_outbox.event_id
-    ON CONFLICT (tenant_id, event_id, topic) DO NOTHING
-    RETURNING event_id
 ), claimed_outbox AS (
     UPDATE event_outbox AS outbox
     SET claimed_by = $2, claim_expires_at = clock_timestamp() + interval '30 seconds',
@@ -582,7 +592,6 @@ WITH locked_outbox AS MATERIALIZED (
 SELECT event.event_id, event.tenant_id, COALESCE(event.connection_id, ''),
        event.conversation_id, event.canonical_body
 FROM claimed_delivery
-CROSS JOIN (SELECT count(*) FROM materialized) AS materialization_barrier
 JOIN gateway_events AS event
   ON event.tenant_id = $1 AND event.event_id = claimed_delivery.event_id
 ORDER BY event.event_id`
@@ -592,6 +601,9 @@ func (repository *Repository) ClaimEvents(ctx context.Context, tenantID domain.T
 		return nil, gatewaykafka.ErrInvalidOutboxWorker
 	}
 	return inTenant(ctx, repository, tenantID, func(tx transaction) ([]gatewaykafka.OutboxEvent, error) {
+		if _, err := tx.ExecContext(ctx, materializeKafkaEventsSQL, string(tenantID), limit, gatewaykafka.DefaultEventsTopic); err != nil {
+			return nil, fmt.Errorf("materialize Kafka events: %w", err)
+		}
 		rows, err := tx.QueryContext(ctx, claimKafkaEventsSQL, string(tenantID), ownerID, limit, gatewaykafka.DefaultEventsTopic)
 		if err != nil {
 			return nil, fmt.Errorf("claim Kafka events: %w", err)

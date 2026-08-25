@@ -133,11 +133,11 @@ func (worker *ActorBackfillWorker) stageConversationPage(ctx context.Context, ow
 		return err
 	}
 	result, err := client.ListConversationsWithCursorDurable(ctx, worker.conversationPageSize, gmproto.ListConversationsRequest_INBOX, baseCursor)
-	if err != nil {
-		return classifyBackfillProviderError(err)
-	}
 	if result.Outcome == libgm.DurableOutcomePoisoned || result.Outcome == libgm.DurableOutcomeDuplicatePoisoned {
 		return messaging.ErrBackfillPoisoned
+	}
+	if err != nil {
+		return classifyBackfillProviderError(err)
 	}
 	if result.Outcome != libgm.DurableOutcomeCommitted {
 		return errors.New("provider conversation page has no committed durable outcome")
@@ -179,14 +179,14 @@ func (worker *ActorBackfillWorker) fetchMessagePage(
 		return err
 	}
 	result, err := client.FetchMessagesDurable(ctx, item.ConversationID, worker.messagePageSize, cursor)
-	if err != nil {
-		return classifyBackfillProviderError(err)
-	}
 	if result.Outcome == libgm.DurableOutcomePoisoned || result.Outcome == libgm.DurableOutcomeDuplicatePoisoned {
 		return classifyBackfillStoreError(worker.checkpoints.MarkBackfillItemFenced(ctx,
 			ownership.Key.TenantID, ownership.Key.ConnectionID, ownership.OwnerID, ownership.FencingToken,
 			checkpointID, item.Ordinal, messaging.BackfillItemPoisoned, "durable_provider_page_poisoned",
 		))
+	}
+	if err != nil {
+		return classifyBackfillProviderError(err)
 	}
 	if result.Outcome != libgm.DurableOutcomeCommitted {
 		return errors.New("provider message page has no committed durable outcome")

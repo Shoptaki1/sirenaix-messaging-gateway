@@ -511,7 +511,7 @@ func TestPostgresIntegrationBackfillCursorRoutingAndDurablePoisonOutcome(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	if processed, runErr := worker.RunConnection(ctx, ownership.Key); !errors.Is(runErr, messaging.ErrBackfillPoisoned) || !processed {
+	if processed, runErr := worker.RunConnection(ctx, ownership.Key); runErr != nil || !processed {
 		t.Fatalf("persist exact-redelivered child poison = (%v, %v)", processed, runErr)
 	}
 	checkpoint, err = repository.LoadBackfillCheckpoint(ctx, tenantID, connectionID)

@@ -1400,12 +1400,16 @@ JOIN messages AS message ON message.tenant_id = link.tenant_id AND message.messa
 WHERE link.tenant_id = $1 AND message.provider_message_id = $2`, []any{string(tenantA), "task7-two-image-message"}, 2)
 
 	assertTenantCount(t, ctx, db, string(tenantA), `SELECT count(*)
-FROM gateway_events
-WHERE tenant_id = $1 AND event_type = 'media.pending' AND aggregate_id LIKE $2`, []any{string(tenantA), "attachment_%"}, 2)
+FROM gateway_events AS event
+JOIN media_objects AS media ON media.tenant_id = event.tenant_id AND media.media_id = event.aggregate_id
+JOIN messages AS message ON message.tenant_id = media.tenant_id AND message.message_id = media.message_id
+WHERE event.tenant_id = $1 AND event.event_type = 'media.pending' AND message.provider_message_id = $2`, []any{string(tenantA), "task7-two-image-message"}, 2)
 	assertTenantCount(t, ctx, db, string(tenantA), `SELECT count(*)
 FROM event_outbox AS outbox
 JOIN gateway_events AS event ON event.tenant_id = outbox.tenant_id AND event.event_id = outbox.event_id
-WHERE outbox.tenant_id = $1 AND event.event_type = 'media.pending' AND event.aggregate_id LIKE $2`, []any{string(tenantA), "attachment_%"}, 4)
+JOIN media_objects AS media ON media.tenant_id = event.tenant_id AND media.media_id = event.aggregate_id
+JOIN messages AS message ON message.tenant_id = media.tenant_id AND message.message_id = media.message_id
+WHERE outbox.tenant_id = $1 AND event.event_type = 'media.pending' AND message.provider_message_id = $2`, []any{string(tenantA), "task7-two-image-message"}, 4)
 
 	receiptMessage, err := repository.GetMessage(ctx, tenantA, "task7-message-a1")
 	if err != nil {

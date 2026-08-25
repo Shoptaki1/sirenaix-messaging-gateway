@@ -1798,8 +1798,9 @@ WHERE tenant_id = $1 AND connection_id = $2 AND ordering_key = $3 AND lane_token
 	if err = inTenantExec(ctx, repository, tenantA, func(tx transaction) error {
 		_, insertErr := tx.ExecContext(ctx, `INSERT INTO connections
             (tenant_id, connection_id, name, state, provider_device_fingerprint)
-            SELECT $1, 'task7-quota-' || lpad(value::text, 3, '0'), 'quota fixture', 'connected', $2
-            FROM generate_series(1, 126) AS value`, string(tenantA), bytes.Repeat([]byte{9}, sha256.Size))
+            SELECT $1, 'task7-quota-' || lpad(value::text, 3, '0'), 'quota fixture', 'connected',
+                   decode(lpad(to_hex(value), 64, '0'), 'hex')
+            FROM generate_series(1, 126) AS value`, string(tenantA))
 		return insertErr
 	}); err != nil {
 		t.Fatalf("seed connection quota boundary: %v", err)

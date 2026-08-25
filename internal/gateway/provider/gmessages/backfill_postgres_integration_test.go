@@ -472,6 +472,9 @@ func TestPostgresIntegrationBackfillCursorRoutingAndDurablePoisonOutcome(t *test
 	if !reflect.DeepEqual(gotActions, wantActions) {
 		t.Fatalf("ActorSender provider actions = %v, want %v", gotActions, wantActions)
 	}
+	transport.mu.Lock()
+	deliveriesBeforeWorker := transport.messageDeliveries
+	transport.mu.Unlock()
 
 	workerConfig := ActorBackfillWorkerConfig{
 		Executor: executor,
@@ -530,8 +533,8 @@ func TestPostgresIntegrationBackfillCursorRoutingAndDurablePoisonOutcome(t *test
 	}) {
 		t.Fatalf("restart message request cursor = %+v", secondRequest)
 	}
-	if deliveries != 3 {
-		t.Fatalf("provider response deliveries = %d, want empty plus two exact poison deliveries", deliveries)
+	if deliveries-deliveriesBeforeWorker != 3 {
+		t.Fatalf("provider response deliveries = %d after baseline %d, want empty plus two exact poison deliveries", deliveries, deliveriesBeforeWorker)
 	}
 	if child, childErr := repository.LoadCommittedCursor(ctx, tenantID, connectionID, "conversation-worker"); childErr != nil || !bytes.Equal(child, wantWorkerCursor) {
 		t.Fatalf("poison changed worker child cursor = %x, %v", child, childErr)

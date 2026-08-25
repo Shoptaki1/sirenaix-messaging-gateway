@@ -1608,7 +1608,7 @@ WHERE tenant_id = $1 AND connection_id = $2 AND ordering_key = $3 AND lane_token
 		t.Fatalf("uncertain message after stale-claim restart recovery = %+v, %v", uncertain, err)
 	}
 
-	secret := session.Envelope{Version: 1, Provider: "webhook", Ciphertext: []byte{1}, WrappedDEK: []byte{2}, Nonce: []byte{3}, KeyID: "task7-key", KeyVersion: 1}
+	secret := session.Envelope{Version: 1, Provider: "webhook", Ciphertext: bytes.Repeat([]byte{1}, 16), WrappedDEK: []byte{2}, Nonce: bytes.Repeat([]byte{3}, 12), KeyID: "task7-key", KeyVersion: 1}
 	for _, endpoint := range []webhook.EndpointRecord{
 		{Endpoint: webhook.Endpoint{ID: "task7-endpoint-a", TenantID: tenantA, Destination: "https://example.com/a", KeyID: "task7-signing-a", Active: true, CreatedAt: time.Now().UTC()}, Secret: secret},
 		{Endpoint: webhook.Endpoint{ID: "task7-endpoint-b", TenantID: tenantB, Destination: "https://example.com/b", KeyID: "task7-signing-b", Active: true, CreatedAt: time.Now().UTC()}, Secret: secret},

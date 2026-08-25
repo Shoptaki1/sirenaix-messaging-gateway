@@ -1688,7 +1688,7 @@ WHERE tenant_id = $1 AND connection_id = $2 AND ordering_key = $3 AND lane_token
 	for index := range 5 {
 		endpointID := fmt.Sprintf("task7-fanout-%02d", index)
 		if err = repository.CreateEndpoint(ctx, webhook.EndpointRecord{
-			Endpoint: webhook.Endpoint{ID: endpointID, TenantID: tenantA, Destination: "https://example.com/fanout", KeyID: endpointID + "-key", Active: true, CreatedAt: time.Now().UTC()},
+			Endpoint: webhook.Endpoint{ID: endpointID, TenantID: tenantA, Destination: fmt.Sprintf("https://example.com/fanout/%d", index), KeyID: endpointID + "-key", Active: true, CreatedAt: time.Now().UTC()},
 			Secret:   fanoutSecret,
 		}, 6); err != nil {
 			t.Fatalf("create fan-out endpoint %d: %v", index, err)
@@ -1740,7 +1740,7 @@ WHERE tenant_id = $1 AND connection_id = $2 AND ordering_key = $3 AND lane_token
 			<-quotaStart
 			endpointID := fmt.Sprintf("task7-quota-race-%d", index)
 			quotaResults <- repository.CreateEndpoint(ctx, webhook.EndpointRecord{
-				Endpoint: webhook.Endpoint{ID: endpointID, TenantID: tenantA, Destination: "https://example.com/quota", KeyID: endpointID + "-key", Active: true, CreatedAt: time.Now().UTC()},
+				Endpoint: webhook.Endpoint{ID: endpointID, TenantID: tenantA, Destination: fmt.Sprintf("https://example.com/quota/%d", index), KeyID: endpointID + "-key", Active: true, CreatedAt: time.Now().UTC()},
 				Secret:   fanoutSecret,
 			}, 6)
 		}(index)

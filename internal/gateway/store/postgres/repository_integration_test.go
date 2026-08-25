@@ -3333,6 +3333,15 @@ func exercisePairingHardening(t *testing.T, ctx context.Context, repository *Rep
 	if swapped, err := repository.CompareAndSwapEncryptedSession(ctx, "tenant-a", "connection-a", loaded.Revision, loaded); err != nil || swapped {
 		t.Fatalf("stale CAS encrypted session = %v, %v", swapped, err)
 	}
+	if err := inTenantExec(ctx, repository, "tenant-a", func(tx transaction) error {
+		_, resetErr := tx.ExecContext(ctx, `UPDATE connections
+            SET state = 'connected', reauthorization_event_id = NULL,
+                pairing_prior_state = NULL, pairing_started_at = NULL, pairing_attempt_id = NULL
+            WHERE tenant_id = $1 AND connection_id = $2`, "tenant-a", "connection-a")
+		return resetErr
+	}); err != nil {
+		t.Fatalf("restore shared connection fixture: %v", err)
+	}
 }
 
 func agePairingAttemptForIntegration(ctx context.Context, repository *Repository, tenantID domain.TenantID, connectionID domain.ConnectionID) error {

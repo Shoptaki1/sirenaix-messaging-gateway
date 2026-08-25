@@ -522,8 +522,6 @@ func (c *Client) ConnectBackground() error {
 	return nil
 }
 
-func (c *Client) postConnect() { c.postConnectContext(context.Background()) }
-
 func (c *Client) postConnectContext(ctx context.Context) {
 	if !waitForContext(ctx, 2*time.Second) {
 		return

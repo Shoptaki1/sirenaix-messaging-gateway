@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/connectionactor"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/ingress"

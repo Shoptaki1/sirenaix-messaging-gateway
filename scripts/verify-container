@@ -97,7 +97,7 @@ if [ "$probe_status" -ne 1 ]; then
 	echo "verify-container: constrained startup returned an unexpected status" >&2
 	exit 1
 fi
-if [ -s "$probe_dir/stdout" ] || ! grep -Fxq 'sirenaix-gateway stopped safely; inspect bounded service metrics' "$probe_dir/stderr"; then
+if [ -s "$probe_dir/stdout" ] || ! grep -Fxq 'sirenaix-gateway: command input or configuration is invalid' "$probe_dir/stderr"; then
 	echo "verify-container: constrained startup did not fail through the safe configuration path" >&2
 	exit 1
 fi

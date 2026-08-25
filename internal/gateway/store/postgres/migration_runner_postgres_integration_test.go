@@ -17,6 +17,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 )
 

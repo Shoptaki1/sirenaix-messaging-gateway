@@ -7,7 +7,7 @@ cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./github.com/a
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./github.com/aws/aws-sdk-go-v2/feature/ec2/imds/LICENSE.txt
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./github.com/aws/aws-sdk-go-v2/internal/configsources/LICENSE.txt
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./github.com/aws/aws-sdk-go-v2/internal/endpoints/v2/LICENSE.txt
-f5122de47ce62d57dcd3e57cdf778ceacc3a847645de3332fea58903def93ecb  ./github.com/aws/aws-sdk-go-v2/internal/sync/singleflight/LICENSE
+23601d8d98c227593c7f6e9c1c497a48dcc39429c4017b69782e43a5696f6e4c  ./github.com/aws/aws-sdk-go-v2/internal/sync/singleflight/LICENSE
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./github.com/aws/aws-sdk-go-v2/internal/v4a/LICENSE.txt
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding/LICENSE.txt
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./github.com/aws/aws-sdk-go-v2/service/internal/checksum/LICENSE.txt
@@ -21,8 +21,8 @@ cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./github.com/a
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./github.com/aws/aws-sdk-go-v2/service/sts/LICENSE.txt
 09e8a9bcec8067104652c168685ab0931e7868f9c8284b66f5ae6edae5f1130b  ./github.com/aws/smithy-go/LICENSE
 d4290ed64c2edd0fce1d84e3f9dfb2881240fe534def76b8cd29ed6af683e287  ./github.com/aws/smithy-go/NOTICE
-f5122de47ce62d57dcd3e57cdf778ceacc3a847645de3332fea58903def93ecb  ./github.com/aws/smithy-go/internal/sync/singleflight/LICENSE
-cb5e8e7e5f4a3988e1063c142c60dc2df75605f4c46515e776e3aca6df976e14  ./github.com/coreos/go-oidc/v3/oidc/LICENSE
+23601d8d98c227593c7f6e9c1c497a48dcc39429c4017b69782e43a5696f6e4c  ./github.com/aws/smithy-go/internal/sync/singleflight/LICENSE
+a8ad31b1c3f40dca5a84119351b8fa8ddc868edd77fad8a8ebf6d8f2d16fa4ae  ./github.com/coreos/go-oidc/v3/oidc/LICENSE
 dccd26c6fd9c296daf44d0bc56bb4efc566edd4880381b3331c9a63e6e471338  ./github.com/coreos/go-oidc/v3/oidc/NOTICE
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  ./github.com/go-jose/go-jose/v4/LICENSE
 dd26a7abddd02e2d0aba97805b31f248ef7835d9e10da289b22e3b8ab78b324d  ./github.com/go-jose/go-jose/v4/json/LICENSE
@@ -34,7 +34,7 @@ f566a9f97bacdaf00d9f21dd991e81dc11201c4e016c86b470799429a1c9a79c  ./github.com/k
 97124ae88383d1220994d57118d689e73a36401eb832c1ce7b15723984e716b7  ./github.com/lib/pq/LICENSE
 88a2379b3ca34bf5c57127aff9dcb802bbb60ece0805cdbda65b3bd115f971d9  ./github.com/mattn/go-colorable/LICENSE
 08eab1118c80885fa1fa6a6dd7303f65a379fcb3733e063d20d1bbc2c76e6fa1  ./github.com/mattn/go-isatty/LICENSE
-6a358d2540ca14048f02d366f23787c0a480157e58f058113f0e27168dd4e447  ./github.com/pierrec/lz4/v4/LICENSE
+fdb37e402bf5ba42e38d2e85f85517645f569962b8ae393eeb8649c73d46a780  ./github.com/pierrec/lz4/v4/LICENSE
 1b8f6b05dd66f6eec835515706886cb01bf00358cb9312301ed6ad23d6b2d008  ./github.com/rs/zerolog/LICENSE
 9ed9133de92870659a93ee70f11102dac696c23a65d68161fa292f1a23831be6  ./github.com/twmb/franz-go/pkg/LICENSE
 9ed9133de92870659a93ee70f11102dac696c23a65d68161fa292f1a23831be6  ./github.com/twmb/franz-go/pkg/kmsg/LICENSE
@@ -138,7 +138,7 @@ addbda3e4e2494f113116a33c650a9df496d02685fa0ce9c794bb99d47b15b1a  ./go.mau.fi/ut
 8182096c59775d0093cd7eeac307ea4c9a83366531fca9d945111cc5c688cb7e  ./go.mau.fi/util/exsync/syncset.go
 431cb446488a82cc5794ca4ef35f27af4566d4ce9e5bd21a95d00d8ff937447b  ./go.mau.fi/util/exzerolog/callermarshal.go
 3b6a56eee91f973443512f885b60b8dc246f7eed1f335148a9b58d7ebc743118  ./go.mau.fi/util/exzerolog/defaults.go
-e5ff0095f062aa9b900ef905c42a2fad1de3ffb68e3a1976775268863d4e4e0f  ./go.mau.fi/util/exzerolog/generics.go
+583ff3aab7771931e263173e4b050127df47487113d5f5f3969fa96538007fea  ./go.mau.fi/util/exzerolog/generics.go
 9d7d3ad3cbb9a3ae3388fdcd70820392421eee4d0848927c4670d94b138c7639  ./go.mau.fi/util/exzerolog/writer.go
 3b002b585389b2df9ea9c15794d4199d96c4363e407cf4adc1c47d477d6723fd  ./go.mau.fi/util/fallocate/doc.go
 71b76908d9d9d14bb5559ecaecdba40129aeb71260c060c377d536a635a264cd  ./go.mau.fi/util/fallocate/fallocate_darwin.go

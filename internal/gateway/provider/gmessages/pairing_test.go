@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/rs/zerolog"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/pairing"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm"
 )

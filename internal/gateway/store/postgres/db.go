@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 )
 

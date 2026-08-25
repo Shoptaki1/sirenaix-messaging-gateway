@@ -480,10 +480,6 @@ func (c *Client) doLongPollContext(ctx context.Context, loggedIn, background boo
 	return true
 }
 
-func (c *Client) readLongPoll(log *zerolog.Logger, rc io.ReadCloser, background bool) bool {
-	return c.readLongPollContext(context.Background(), log, rc, background)
-}
-
 func (c *Client) readLongPollContext(ctx context.Context, log *zerolog.Logger, rc io.ReadCloser, background bool) bool {
 	defer rc.Close()
 	reader := bufio.NewReader(rc)

@@ -20,6 +20,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/kmsg"
 	"github.com/twmb/franz-go/pkg/sasl"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 )
 

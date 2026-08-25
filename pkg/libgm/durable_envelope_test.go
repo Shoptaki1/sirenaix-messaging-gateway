@@ -15,10 +15,11 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	libevents "go.mau.fi/mautrix-gmessages/pkg/libgm/events"
-	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
 	"go.mau.fi/util/pblite"
 	"google.golang.org/protobuf/proto"
+
+	libevents "go.mau.fi/mautrix-gmessages/pkg/libgm/events"
+	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
 )
 
 func TestProviderFramesAndDecryptedMessagesNeverEnterLogsAtAnyLevel(t *testing.T) {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/eventcontract"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/ingress"

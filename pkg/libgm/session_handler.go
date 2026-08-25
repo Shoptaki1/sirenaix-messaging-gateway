@@ -460,11 +460,6 @@ func (s *SessionHandler) queueMessageAck(messageID string) {
 	s.ackMap = append(s.ackMap, messageID)
 }
 
-func (s *SessionHandler) startAckInterval() {
-	// ACK ownership is tied to Client.Connect and is intentionally not started
-	// independently anymore.
-}
-
 func (s *SessionHandler) ackLoop(ctx context.Context, newTicker func(time.Duration) lifecycleTicker) {
 	ticker := newTicker(5 * time.Second)
 	s.ackTickerMu.Lock()

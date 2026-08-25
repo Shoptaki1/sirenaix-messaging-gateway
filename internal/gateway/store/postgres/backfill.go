@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/lib/pq"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/ingress"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/messaging"

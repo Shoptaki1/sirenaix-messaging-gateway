@@ -653,7 +653,7 @@ func (c *Client) handleUpdatesEvent(msg *IncomingRPCMessage) {
 	default:
 		evt := logSafeBytes(c.Logger.Debug(), "provider_frame", msg.GetMessageData())
 		logSafeProviderID(evt, "provider_request_id", msg.Message.SessionID)
-		evt.Str("action_type", msg.Message.Action.String()).
+		evt.Stringer("action_type", msg.Message.Action).
 			Bool("is_old", msg.IsOld).
 			Msg("Got unexpected response")
 	}

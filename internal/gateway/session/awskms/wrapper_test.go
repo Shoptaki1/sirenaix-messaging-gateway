@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/kms"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/session"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/session/awskms"
 )

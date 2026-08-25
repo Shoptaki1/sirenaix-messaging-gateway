@@ -25,7 +25,7 @@ func AddObject[T zerolog.LogObjectMarshaler](arr *zerolog.Array, obj T) {
 }
 
 func AddStringer[T fmt.Stringer](arr *zerolog.Array, str T) {
-	arr.Str(str.String())
+	arr.Stringer(str)
 }
 
 func AddStr[T ~string](arr *zerolog.Array, str T) {

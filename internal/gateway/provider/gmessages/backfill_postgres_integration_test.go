@@ -19,6 +19,9 @@ import (
 
 	"github.com/lib/pq"
 	"github.com/rs/zerolog"
+	"go.mau.fi/util/pblite"
+	"google.golang.org/protobuf/proto"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/connectionactor"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/ingress"
@@ -28,8 +31,6 @@ import (
 	"go.mau.fi/mautrix-gmessages/internal/gateway/store/postgres"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
-	"go.mau.fi/util/pblite"
-	"google.golang.org/protobuf/proto"
 )
 
 type postgresIntegrationSealer struct{}
@@ -294,7 +295,7 @@ func TestPostgresIntegrationBackfillCursorRoutingAndDurablePoisonOutcome(t *test
 	outcome, err := sink.PersistEnvelopeOutcome(ctx, ownership, libgm.DurableEnvelope{
 		ResponseID: "response-empty", Raw: []byte("response-empty"),
 		Request: libgm.DurableRequest{Action: gmproto.ActionType_LIST_MESSAGES, ConversationID: "conversation-empty"},
-		Decoded: &libgm.IncomingRPCMessage{DecryptedMessage: &gmproto.ListMessagesResponse{Cursor: emptyCursor}},
+		Decoded: &libgm.IncomingRPCMessage{PayloadSource: libgm.PayloadSourceEncryptedData, DecryptedMessage: &gmproto.ListMessagesResponse{Cursor: emptyCursor}},
 	})
 	if err != nil || outcome != libgm.DurableOutcomeCommitted {
 		t.Fatalf("empty page = (%v, %v)", outcome, err)
@@ -319,7 +320,7 @@ func TestPostgresIntegrationBackfillCursorRoutingAndDurablePoisonOutcome(t *test
 	poisonEnvelope := libgm.DurableEnvelope{
 		ResponseID: "response-attachment-poison", Raw: []byte("response-attachment-poison"),
 		Request: libgm.DurableRequest{Action: gmproto.ActionType_LIST_MESSAGES, ConversationID: "conversation-poison"},
-		Decoded: &libgm.IncomingRPCMessage{DecryptedMessage: &gmproto.ListMessagesResponse{
+		Decoded: &libgm.IncomingRPCMessage{PayloadSource: libgm.PayloadSourceEncryptedData, DecryptedMessage: &gmproto.ListMessagesResponse{
 			Messages: []*gmproto.Message{{
 				MessageID: "message-media", ConversationID: "conversation-poison",
 				MessageInfo: []*gmproto.MessageInfo{{Data: &gmproto.MessageInfo_MediaContent{MediaContent: &gmproto.MediaContent{
@@ -345,7 +346,7 @@ func TestPostgresIntegrationBackfillCursorRoutingAndDurablePoisonOutcome(t *test
 	crossOutcome, err := sink.PersistEnvelopeOutcome(ctx, ownership, libgm.DurableEnvelope{
 		ResponseID: "response-cross-conversation", Raw: []byte("response-cross-conversation"),
 		Request: libgm.DurableRequest{Action: gmproto.ActionType_LIST_MESSAGES, ConversationID: "conversation-requested"},
-		Decoded: &libgm.IncomingRPCMessage{DecryptedMessage: &gmproto.ListMessagesResponse{
+		Decoded: &libgm.IncomingRPCMessage{PayloadSource: libgm.PayloadSourceEncryptedData, DecryptedMessage: &gmproto.ListMessagesResponse{
 			Messages: []*gmproto.Message{{MessageID: "message-wrong", ConversationID: "conversation-other"}},
 			Cursor:   &gmproto.Cursor{LastItemID: "wrong-boundary", LastItemTimestamp: 1724400000031},
 		}},

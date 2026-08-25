@@ -84,15 +84,6 @@ const (
 	ContactSyncFailed    ContactSyncStatus = "failed"
 )
 
-func (status ContactSyncStatus) valid() bool {
-	switch status {
-	case ContactSyncRunning, ContactSyncSucceeded, ContactSyncFailed:
-		return true
-	default:
-		return false
-	}
-}
-
 type ContactSyncRun struct {
 	ID            string
 	TenantID      domain.TenantID

@@ -10,9 +10,10 @@ import (
 	"testing"
 
 	"github.com/rs/zerolog"
-	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
 	"go.mau.fi/util/pblite"
 	"google.golang.org/protobuf/proto"
+
+	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
 )
 
 func TestListConversationsPublicMethodsForwardCursor(t *testing.T) {

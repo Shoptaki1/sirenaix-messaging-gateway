@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 )
 

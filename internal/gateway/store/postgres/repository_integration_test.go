@@ -21,6 +21,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"google.golang.org/protobuf/proto"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/contactsync"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/ingress"
@@ -31,7 +33,6 @@ import (
 	"go.mau.fi/mautrix-gmessages/internal/gateway/session"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/webhook"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
-	"google.golang.org/protobuf/proto"
 )
 
 func integrationProviderCursor(t *testing.T, id string, timestamp int64) []byte {
@@ -1133,9 +1134,11 @@ func exerciseTask7Durability(t *testing.T, ctx context.Context, repository *Repo
 	createMessage(tenantA, connectionA, "task7-message-a1", "task7-idem-a1", 1)
 	createMessage(tenantA, connectionA, "task7-message-a2", "task7-idem-a2", 2)
 	createMessage(tenantB, connectionB, "task7-message-b1", "task7-idem-b1", 3)
-	assertTenantCount(t, ctx, db, string(tenantA), "SELECT count(*) FROM message_status_history WHERE tenant_id = $1", []any{string(tenantA)}, 2)
-	assertTenantCount(t, ctx, db, string(tenantA), "SELECT count(*) FROM gateway_events WHERE tenant_id = $1 AND event_type = 'message.queued'", []any{string(tenantA)}, 2)
-	assertTenantCount(t, ctx, db, string(tenantA), "SELECT count(*) FROM event_outbox WHERE tenant_id = $1", []any{string(tenantA)}, 4)
+	assertTenantCount(t, ctx, db, string(tenantA), "SELECT count(*) FROM message_status_history WHERE tenant_id = $1 AND message_id IN ($2, $3)", []any{string(tenantA), "task7-message-a1", "task7-message-a2"}, 2)
+	assertTenantCount(t, ctx, db, string(tenantA), "SELECT count(*) FROM gateway_events WHERE tenant_id = $1 AND event_type = 'message.queued' AND aggregate_id IN ($2, $3)", []any{string(tenantA), "task7-message-a1", "task7-message-a2"}, 2)
+	assertTenantCount(t, ctx, db, string(tenantA), `SELECT count(*) FROM event_outbox AS outbox
+        JOIN gateway_events AS event ON event.tenant_id = outbox.tenant_id AND event.event_id = outbox.event_id
+        WHERE outbox.tenant_id = $1 AND event.aggregate_id IN ($2, $3)`, []any{string(tenantA), "task7-message-a1", "task7-message-a2"}, 4)
 
 	newChatInput := messaging.SendInput{ConnectionID: connectionA, Recipient: "+12025550188", RouteMode: messaging.RouteModePhoneDefault, Text: "new chat"}
 	newChat, newChatErr := repository.CreateOutbound(ctx, messaging.CreateOutbound{

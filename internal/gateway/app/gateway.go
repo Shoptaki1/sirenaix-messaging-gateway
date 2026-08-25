@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/auth"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/connectionactor"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/contactsync"

@@ -9,8 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 	"gopkg.in/yaml.v3"
+
+	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 )
 
 type documentedResponse struct {

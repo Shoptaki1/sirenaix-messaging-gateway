@@ -10,6 +10,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"google.golang.org/protobuf/proto"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/connectionactor"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/ingress"
@@ -17,7 +19,6 @@ import (
 	"go.mau.fi/mautrix-gmessages/internal/gateway/store/postgres"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
-	"google.golang.org/protobuf/proto"
 )
 
 var (

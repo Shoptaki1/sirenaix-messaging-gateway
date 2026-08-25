@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
+
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
 )
 

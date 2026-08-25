@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 	gatewaysession "go.mau.fi/mautrix-gmessages/internal/gateway/session"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm"

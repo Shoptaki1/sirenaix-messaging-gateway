@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/events"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
 )
@@ -364,8 +365,6 @@ func TestFailedInitialRefreshDrainsQueuedSessionBeforeDone(t *testing.T) {
 		return refreshErr
 	}
 	client.SetLifecycleHooks(LifecycleHooks{OnSessionChange: func() {
-		client.lifecycleMu.Lock()
-		client.lifecycleMu.Unlock()
 		sessionCallbacks.Add(1)
 	}})
 	connectResult := make(chan error, 1)

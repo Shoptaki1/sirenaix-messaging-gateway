@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/messaging"
 )
@@ -157,10 +158,10 @@ WITH locked_connection AS MATERIALIZED (
         tenant_id, event_id, event_type, aggregate_type, aggregate_id,
         connection_id, conversation_id, canonical_body
     )
-    SELECT $1, $8, 'message.uncertain', 'message', recovered_message.message_id,
+    SELECT $1, $8::text, 'message.uncertain', 'message', recovered_message.message_id,
            recovered_message.connection_id, recovered_message.conversation_id,
            convert_to(jsonb_build_object(
-               'event_id', $8, 'type', 'message.uncertain',
+               'event_id', $8::text, 'type', 'message.uncertain',
 	           'version', 1,
 	           'occurred_at', to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
 	           'tenant_id', $1,

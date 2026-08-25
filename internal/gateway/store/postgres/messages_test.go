@@ -14,12 +14,13 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+	"google.golang.org/protobuf/proto"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/ingress"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/messaging"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/session"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
-	"google.golang.org/protobuf/proto"
 )
 
 func providerCursorBytes(t *testing.T, id string, timestamp int64) []byte {
@@ -1527,7 +1528,7 @@ func TestProviderInboxConflictStorageIsOneBoundedRecordPerResponseID(t *testing.
 	for _, required := range []string{
 		"on conflict (tenant_id, connection_id, provider_response_id)",
 		"occurrence_count", "least(", "conflicting_envelope_size",
-		"octet_length($6)", "substring($6 from 1 for 256)",
+		"octet_length($6::bytea)", "substring($6::bytea from 1 for 256)",
 	} {
 		if !strings.Contains(query, required) {
 			t.Fatalf("bounded conflict SQL missing %q: %s", required, query)
@@ -1542,7 +1543,7 @@ func TestPoisonInboxReservationEnforcesRowAndCumulativeRawByteCaps(t *testing.T)
 	query := strings.ToLower(insertProviderInboxSQL)
 	for _, required := range []string{
 		"provider_response_reservations", "poison_inbox.poisoned", "count(*)",
-		"sum(octet_length(poison_inbox.raw_envelope))", "octet_length($6)",
+		"sum(octet_length(poison_inbox.raw_envelope))", "octet_length($6::bytea)",
 		"< $12", "<= $13",
 	} {
 		if !strings.Contains(query, required) {

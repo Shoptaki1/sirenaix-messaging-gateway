@@ -20,7 +20,9 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
+
 	"go.mau.fi/mautrix-gmessages/internal/gateway/app"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/auth"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/domain"
@@ -34,8 +36,6 @@ import (
 	"go.mau.fi/mautrix-gmessages/internal/gateway/session/localkey"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/store/postgres"
 	"go.mau.fi/mautrix-gmessages/internal/gateway/webhook"
-
-	_ "github.com/lib/pq"
 )
 
 const maxConfigFileBytes = 1 << 20

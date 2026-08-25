@@ -407,6 +407,16 @@ func TestPostgresIntegrationBackfillCursorRoutingAndDurablePoisonOutcome(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
+	createdClaim, claimed, err := repository.ClaimNext(ctx, messaging.LaneKey{
+		TenantID: tenantID, ConnectionID: connectionID, ConversationID: "new:+12025550123",
+	}, ownership.OwnerID)
+	if err != nil || !claimed {
+		t.Fatalf("claim created-conversation message = (%+v, %v, %v)", createdClaim, claimed, err)
+	}
+	if owned, beginErr := repository.BeginProviderIO(ctx, createdClaim, ownership.OwnerID); beginErr != nil || !owned {
+		t.Fatalf("begin created-conversation provider I/O = (%v, %v)", owned, beginErr)
+	}
+	createdMessage = createdClaim.Message
 	sender, err := NewActorSender(ActorSenderConfig{Executor: executor, Lines: repository, Media: postgresNoMedia{}, Routes: repository})
 	if err != nil {
 		t.Fatal(err)

@@ -1366,7 +1366,9 @@ func exerciseTask7Durability(t *testing.T, ctx context.Context, repository *Repo
 	if _, err = processEnvelope(tenantB, connectionB, ownerB, leaseB.FencingToken, "task7-response-b", []byte("task7-envelope-b")); err != nil {
 		t.Fatal(err)
 	}
-	assertTenantCount(t, ctx, db, string(tenantA), "SELECT count(*) FROM provider_inbox_conflicts WHERE tenant_id = $1", []any{string(tenantA)}, 1)
+	assertTenantCount(t, ctx, db, string(tenantA),
+		"SELECT count(*) FROM provider_inbox_conflicts WHERE tenant_id = $1 AND connection_id = $2 AND provider_response_id = $3",
+		[]any{string(tenantA), string(connectionA), "task7-response-a"}, 1)
 
 	mediaSecret := session.Envelope{
 		Version: session.EnvelopeVersion, Provider: "gmessages-media", Ciphertext: bytes.Repeat([]byte{1}, 16),

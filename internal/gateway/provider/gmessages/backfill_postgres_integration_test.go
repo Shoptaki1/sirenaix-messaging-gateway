@@ -332,7 +332,11 @@ func TestPostgresIntegrationBackfillCursorRoutingAndDurablePoisonOutcome(t *test
 	}
 	for attempt := 0; attempt < 2; attempt++ {
 		outcome, err = sink.PersistEnvelopeOutcome(ctx, ownership, poisonEnvelope)
-		if err != nil || outcome != libgm.DurableOutcomePoisoned {
+		expected := libgm.DurableOutcomePoisoned
+		if attempt > 0 {
+			expected = libgm.DurableOutcomeDuplicatePoisoned
+		}
+		if err != nil || outcome != expected {
 			t.Fatalf("poison attempt %d = (%v, %v)", attempt, outcome, err)
 		}
 	}

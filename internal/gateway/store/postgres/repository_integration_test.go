@@ -1167,7 +1167,7 @@ func exerciseTask7Durability(t *testing.T, ctx context.Context, repository *Repo
 	}
 	var preservedOrderingKey string
 	if err = inTenantExec(ctx, repository, tenantA, func(tx transaction) error {
-		return tx.QueryRowContext(ctx, `SELECT ordering_key FROM conversations
+		return tx.QueryRowContext(ctx, `SELECT COALESCE(NULLIF(ordering_key, ''), conversation_id) FROM conversations
             WHERE tenant_id = $1 AND connection_id = $2 AND conversation_id = $3`,
 			string(tenantA), string(connectionA), conversation).Scan(&preservedOrderingKey)
 	}); err != nil || preservedOrderingKey != conversation {

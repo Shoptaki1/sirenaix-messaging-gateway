@@ -112,7 +112,16 @@ jobs:
           cache: true
 
       - name: Install pinned license classifier
-        run: go install github.com/google/go-licenses@v1.6.0
+        run: |
+          for attempt in 1 2 3; do
+            if go install github.com/google/go-licenses@v1.6.0; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
 
       - name: Check production gateway dependency licenses
         run: ./scripts/check-licenses

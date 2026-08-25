@@ -123,6 +123,15 @@ jobs:
 
       - name: Install dependencies
         run: |
+          for attempt in 1 2 3; do
+            if go mod download; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
           go install golang.org/x/tools/cmd/goimports@v0.40.0
           GOTOOLCHAIN=auto go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
           export PATH="$HOME/go/bin:$PATH"

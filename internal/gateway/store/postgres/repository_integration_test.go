@@ -3334,6 +3334,10 @@ func exercisePairingHardening(t *testing.T, ctx context.Context, repository *Rep
 		t.Fatalf("stale CAS encrypted session = %v, %v", swapped, err)
 	}
 	if err := inTenantExec(ctx, repository, "tenant-a", func(tx transaction) error {
+		if _, deleteErr := tx.ExecContext(ctx, `DELETE FROM connections
+            WHERE tenant_id = $1 AND connection_id = $2`, "tenant-a", "pairing-new"); deleteErr != nil {
+			return deleteErr
+		}
 		_, resetErr := tx.ExecContext(ctx, `UPDATE connections
             SET state = 'connected', reauthorization_event_id = NULL,
                 pairing_prior_state = NULL, pairing_started_at = NULL, pairing_attempt_id = NULL

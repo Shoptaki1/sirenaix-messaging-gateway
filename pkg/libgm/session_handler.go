@@ -197,7 +197,13 @@ func (s *SessionHandler) durableRequestFor(msg *IncomingRPCMessage) DurableReque
 }
 
 func (s *SessionHandler) receiveResponse(msg *IncomingRPCMessage) bool {
-	if msg == nil || msg.PayloadSource != PayloadSourceEncryptedData || msg.Message == nil {
+	if msg == nil || msg.Message == nil {
+		return false
+	}
+	// Correlated responses are either encrypted (normal RPCs) or unencrypted (the GAIA
+	// pairing handshake, which runs before session keys exist). Rejecting everything but
+	// encrypted here dropped the pairing responses, so the GAIA switch below never ran.
+	if msg.PayloadSource != PayloadSourceEncryptedData && msg.PayloadSource != PayloadSourceUnencryptedData {
 		return false
 	}
 	if s.client.AuthData.HasCookies() {
@@ -394,8 +400,11 @@ func (s *SessionHandler) buildMessage(params SendMessageParams) (string, proto.M
 			},
 		},
 		Auth: &gmproto.OutgoingRPCMessage_Auth{
-			RequestID:        requestID,
-			TachyonAuthToken: auth.TachyonAuthToken,
+			RequestID: requestID,
+			// Copy the token: this message outlives the auth snapshot, whose deferred
+			// ClearSecrets() zeroes the source slice in place. Referencing it directly
+			// sent an all-zero TachyonAuthToken, so SendMessage came back UNAUTHENTICATED.
+			TachyonAuthToken: append([]byte(nil), auth.TachyonAuthToken...),
 			ConfigVersion:    util.ConfigMessage,
 		},
 		DestRegistrationIDs: []string{},

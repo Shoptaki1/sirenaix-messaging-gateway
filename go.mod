@@ -1,6 +1,6 @@
 module go.mau.fi/mautrix-gmessages
 
-go 1.25.0
+go 1.26.0
 
 toolchain go1.26.6
 
@@ -20,7 +20,7 @@ require (
 	github.com/twmb/franz-go v1.21.6
 	github.com/twmb/franz-go/pkg/kmsg v1.13.1
 	go.mau.fi/util v0.10.0
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/exp v0.0.0-20260813180055-c1d0aacb2297
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1

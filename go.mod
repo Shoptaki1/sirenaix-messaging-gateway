@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.38
 	github.com/aws/aws-sdk-go-v2/service/kms v1.55.7
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.107.3
-	github.com/coreos/go-oidc/v3 v3.20.0
+	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/gabriel-vasile/mimetype v1.4.15
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.12.3

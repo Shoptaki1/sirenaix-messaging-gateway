@@ -55,6 +55,7 @@ const (
 	PayloadSourceEncryptedData
 	PayloadSourceEncryptedData2
 	PayloadSourceLogoutControl
+	PayloadSourceUnencryptedData
 )
 
 // DurableEnvelope is delivered synchronously on the connection polling
@@ -348,6 +349,12 @@ func (c *Client) decryptInternalMessage(data *gmproto.IncomingRPCMessage) (*Inco
 			}
 		} else if IsLegacyLogoutControl(msg.Message) {
 			msg.PayloadSource = PayloadSourceLogoutControl
+		} else if isGaiaPairingResponse(msg.Message) {
+			// The GAIA pairing handshake runs before session encryption keys exist, so its
+			// CLIENT_INIT/CLIENT_FINISHED responses are legitimately unencrypted. This is
+			// scoped to those two actions only: every other unauthenticated plaintext data
+			// event still falls through to the rejection below.
+			msg.PayloadSource = PayloadSourceUnencryptedData
 		} else {
 			return msg, errors.New("data event has no authenticated ciphertext")
 		}
@@ -554,6 +561,22 @@ var hackyLoggedOutBytes = []byte{0x72, 0x00}
 func IsLegacyLogoutControl(message *gmproto.RPCMessageData) bool {
 	return message != nil && message.GetAction() == gmproto.ActionType_GET_UPDATES && message.GetSessionID() == "" &&
 		message.EncryptedData == nil && message.EncryptedData2 == nil && bytes.Equal(message.UnencryptedData, hackyLoggedOutBytes)
+}
+
+// isGaiaPairingResponse reports whether a data event is a GAIA pairing handshake
+// response (CLIENT_INIT/CLIENT_FINISHED). These are exchanged before session
+// encryption keys exist, so they are legitimately unencrypted; every other
+// plaintext data event is still rejected as unauthenticated.
+func isGaiaPairingResponse(message *gmproto.RPCMessageData) bool {
+	if message == nil || message.UnencryptedData == nil {
+		return false
+	}
+	switch message.GetAction() {
+	case gmproto.ActionType_CREATE_GAIA_PAIRING_CLIENT_INIT, gmproto.ActionType_CREATE_GAIA_PAIRING_CLIENT_FINISHED:
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *Client) handleUpdatesEvent(msg *IncomingRPCMessage) {

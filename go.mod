@@ -1,6 +1,6 @@
 module go.mau.fi/mautrix-gmessages
 
-go 1.25.0
+go 1.26.0
 
 toolchain go1.26.6
 
@@ -16,12 +16,12 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.12.3
 	github.com/rs/zerolog v1.35.1
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.0
 	github.com/twmb/franz-go v1.21.6
 	github.com/twmb/franz-go/pkg/kmsg v1.13.1
-	go.mau.fi/util v0.10.0
-	golang.org/x/crypto v0.55.0
-	golang.org/x/exp v0.0.0-20260813180055-c1d0aacb2297
+	go.mau.fi/util v0.10.1
+	golang.org/x/crypto v0.57.0
+	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
 	maunium.net/go/mautrix v0.30.0
@@ -46,16 +46,14 @@ require (
 	github.com/aws/smithy-go v1.27.8 // indirect
 	github.com/coder/websocket v1.8.15 // indirect
 	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-sqlite3 v1.14.49 // indirect
-	github.com/petermattis/goid v0.0.0-20260816044145-ed329add6b1b // indirect
+	github.com/mattn/go-sqlite3 v1.14.52 // indirect
+	github.com/petermattis/goid v0.0.0-20260820044319-269ab09b5261 // indirect
 	github.com/pierrec/lz4/v4 v4.1.26 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
@@ -65,12 +63,12 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/yuin/goldmark v1.8.5 // indirect
 	go.mau.fi/zeroconfig v0.2.0 // indirect
-	golang.org/x/mod v0.40.0 // indirect
-	golang.org/x/net v0.58.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/net v0.59.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	maunium.net/go/mauflag v1.0.0 // indirect
